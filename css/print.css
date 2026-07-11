@@ -1,0 +1,195 @@
+/* Print layout (Cmd+P) — a recruiter-friendly PDF.
+   The screen design collapses into a compact, ink-safe, single-flow
+   document: no chrome, no color floods, no giant display type. */
+
+@page {
+  size: A4;
+  margin: 14mm 16mm;
+}
+
+/* ── Hide everything that is not content ── */
+.vnav,
+.hero-buttons,
+.masthead-avatar-wrap,
+.section-ribbon,
+#contact form,
+.edit-tooltip,
+.admin-toolbar,
+.variant-bar,
+.entity-add,
+.entity-delete,
+.drag-handle,
+.empty-note {
+  display: none !important;
+}
+
+/* ── Base ── */
+body {
+  display: block;          /* undo the sticky-footer flex column */
+  min-height: 0;
+  background: #fff;
+  color: #131313;
+  font-size: 10.5pt;
+  line-height: 1.45;
+}
+
+.site-header,
+.section,
+.footer {
+  padding: 0;
+  border: none;
+  background: #fff !important;
+  color: #131313 !important;
+}
+
+.site-header-inner,
+.section-container,
+.footer-shell {
+  max-width: none;
+  padding: 0;
+}
+
+/* ── Masthead ── */
+.masthead-meta-row { margin: 0 0 4pt; }
+.masthead-kicker,
+.masthead-date { font-size: 8pt; letter-spacing: 1px; color: #636363; }
+
+.masthead-wordmark {
+  font-size: 30pt;
+  line-height: 1.0;
+  letter-spacing: 0.5px;
+  padding: 0 0 6pt;
+  color: #131313 !important;
+}
+.masthead-wordmark br { display: none; } /* one line on paper */
+
+.masthead-deck {
+  font-size: 11pt;
+  color: #131313;
+  max-width: none;
+  margin-bottom: 10pt;
+}
+
+.site-header { margin-bottom: 14pt; border-bottom: 1pt solid #131313; padding-bottom: 8pt; }
+
+/* Subpage color bands become plain headers */
+.site-header--band { --band-ink: #131313; }
+.page-title { font-size: 24pt; color: #131313 !important; padding: 0 0 6pt; }
+
+/* ── Sections ── */
+.section { margin-bottom: 14pt; }
+
+.section-title {
+  font-size: 15pt;
+  line-height: 1.05;
+  margin-bottom: 4pt;
+  color: #131313;
+}
+
+.section-subtitle {
+  font-size: 9.5pt;
+  color: #636363;
+  margin-bottom: 8pt;
+  max-width: none;
+}
+
+/* ── Achievement tiles: flat list, hairline separators ── */
+.tile-grid { display: block; }
+
+.story-tile,
+.story-tile.mint,
+.story-tile.featured {
+  background: #fff !important;
+  color: #131313 !important;
+  border: none;
+  border-top: 0.5pt solid #bdbdbd;
+  border-radius: 0;
+  padding: 7pt 0;
+  gap: 3pt;
+  break-inside: avoid;
+}
+
+.story-kicker { font-size: 7.5pt; color: #636363 !important; opacity: 1; }
+.story-headline,
+.story-tile.featured .story-headline { font-size: 11.5pt; color: #131313 !important; }
+.story-deck { font-size: 9.5pt; opacity: 1; color: #333 !important; }
+.story-meta {
+  font-size: 7.5pt;
+  color: #636363 !important;
+  opacity: 1;
+  border-top: none;
+  padding-top: 2pt;
+  margin-top: 0;
+}
+
+/* ── Timeline: compact two-column rows, no rail ── */
+.timeline-list {
+  border-left: none;
+  padding-left: 0;
+  margin-left: 0;
+  gap: 0;
+}
+
+.timeline-item {
+  grid-template-columns: 34mm 1fr;
+  gap: 6mm;
+  padding: 7pt 0;
+  border-top: 0.5pt solid #bdbdbd;
+  break-inside: avoid;
+}
+
+.timeline-meta { padding-top: 0; gap: 2pt; }
+.timeline-meta h4 { font-size: 11pt; color: #131313 !important; }
+.timeline-company { font-size: 8.5pt; }
+.timeline-time { font-size: 7.5pt; margin-top: 1pt; }
+.timeline-duration { font-size: 7pt; }
+
+.timeline-body {
+  background: #fff !important;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  gap: 4pt;
+  color: #131313 !important;
+}
+
+.timeline-body .story-deck { color: #333 !important; }
+.timeline-bullets { gap: 2pt; }
+.timeline-bullets li { font-size: 9pt; color: #333 !important; padding-left: 10pt; }
+.timeline-bullets li::before { color: #131313 !important; }
+
+/* ── Contact section: keep only the heading (details live in footer) ── */
+#contact .section-title { display: none; }
+#contact { margin: 0; }
+
+/* ── Footer: contact sheet in plain ink ── */
+.footer { border-top: 1pt solid #131313; padding-top: 8pt; }
+
+.footer-grid { grid-template-columns: repeat(4, 1fr); gap: 5mm; }
+
+.footer-col h6 { color: #131313 !important; font-size: 7.5pt; margin-bottom: 3pt; }
+.footer-col span,
+.footer-col a {
+  color: #333 !important;
+  opacity: 1;
+  font-size: 8.5pt;
+  margin-bottom: 2pt;
+}
+.footer-col a.btn-tag {
+  background: none;
+  padding: 0;
+  margin-top: 0;
+  border-radius: 0;
+  font-size: 8.5pt;
+  letter-spacing: 0.5px;
+}
+
+.footer-credit {
+  margin-top: 8pt;
+  padding-top: 4pt;
+  border-top: 0.5pt solid #bdbdbd;
+  opacity: 1;
+  color: #949494 !important;
+  font-size: 7pt;
+}
+.footer-credit a { color: #636363 !important; }
