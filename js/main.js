@@ -3,6 +3,13 @@
 import { initAuth, isAdmin } from './auth.js';
 import { renderPage, applyTexts, applyBlockOrder } from './render.js';
 
+// Cold load has no inbound view transition (nothing to morph from) —
+// give it a one-time entrance fade instead. Navigations between pages
+// are handled by the cross-document view transitions in motion.css.
+window.addEventListener('pagereveal', e => {
+  if (!e.viewTransition) document.documentElement.classList.add('is-first-load');
+});
+
 initAuth();
 applyTexts();
 applyBlockOrder();
