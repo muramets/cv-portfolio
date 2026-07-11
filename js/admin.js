@@ -1,11 +1,11 @@
 // Admin mode: inline editing, add/delete entities, toolbar.
 // Initialized ONLY when auth.isAdmin() — public visitors never load this UI.
 
-import { ENTITY_TYPES } from './entities.js?v=7';
-import { store } from './store.js?v=7';
-import { renderCollection, getItems, applyTexts } from './render.js?v=7';
-import { logout } from './auth.js?v=7';
-import { makeSortable, createHandle } from './dnd.js?v=7';
+import { ENTITY_TYPES } from './entities.js?v=8';
+import { store } from './store.js?v=8';
+import { renderCollection, getItems, applyTexts } from './render.js?v=8';
+import { logout } from './auth.js?v=8';
+import { makeSortable, createHandle } from './dnd.js?v=8';
 
 let pageState = null; // { name: { container, items } }
 
@@ -247,15 +247,18 @@ function switchVariant(id) {
 
 function addVariant() {
   const variants = store.getVariants();
+  const current = store.getActiveVariant();
   const id = 'v' + Date.now().toString(36);
   const label = 'Variant ' + (variants.length + 1);
-  // start the new persona as a copy of what's currently on screen
-  const snapshot = Object.fromEntries(
-    Object.keys(pageState).map(name => [name, structuredClone(pageState[name].items)]));
   variants.push({ id, label });
   store.saveVariants(variants);
+  // full copy of the CURRENT persona: stored collections and texts of
+  // every page, then a snapshot of what's rendered right now (covers
+  // seed-only collections never saved before)
+  store.copyVariantData(current, id);
   store.setActiveVariant(id);
-  Object.entries(snapshot).forEach(([name, items]) => store.saveCollection(name, items));
+  Object.keys(pageState).forEach(name =>
+    store.saveCollection(name, structuredClone(pageState[name].items)));
   switchVariant(id);
 }
 

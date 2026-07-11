@@ -140,6 +140,7 @@
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
+  position: relative;
 }
 
 .variant-tab-label {
@@ -162,16 +163,29 @@
 }
 .variant-tab.is-active .variant-tab-label:hover { color: var(--absolute-black); }
 
+/* Delete cross — same pattern as entity cards: a small round badge
+   that fades in on hover, overlapping the tab's top-right corner */
 .variant-tab-del {
-  color: #8c8c8c;
-  font-size: 13px;
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 11px;
   line-height: 1;
-  padding: 0 8px 0 2px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
-  transition: opacity 150ms ease, color 150ms ease;
+  transition: opacity 150ms ease, background 150ms ease;
+  z-index: 5;
 }
 .variant-tab:hover .variant-tab-del { opacity: 1; }
-.variant-tab-del:hover { color: #ff6b6b; }
+.variant-tab-del:hover { background: #d00; }
 
 .variant-tab-add {
   font-family: var(--font-mono);

@@ -42,6 +42,34 @@ export const store = {
       .forEach(k => localStorage.removeItem(k));
   },
 
+  /** Clone every stored key of one variant (collections + texts on ALL
+      pages) into another — a new persona starts as a full copy of the
+      one it was created from, not of the seeds. */
+  copyVariantData(fromId, toId) {
+    const colFrom = PREFIX + 'col.' + fromId + '.';
+    const txtFrom = PREFIX + 'texts.' + fromId + '.';
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith(colFrom)) {
+        localStorage.setItem(PREFIX + 'col.' + toId + '.' + k.slice(colFrom.length), localStorage.getItem(k));
+      } else if (k.startsWith(txtFrom)) {
+        localStorage.setItem(PREFIX + 'texts.' + toId + '.' + k.slice(txtFrom.length), localStorage.getItem(k));
+      } else if (fromId === 'default') {
+        // legacy unscoped keys belong to the default variant
+        if (k.startsWith(PREFIX + 'col.') && !k.slice((PREFIX + 'col.').length).includes('.')) {
+          const name = k.slice((PREFIX + 'col.').length);
+          if (!localStorage.getItem(colFrom + name)) {
+            localStorage.setItem(PREFIX + 'col.' + toId + '.' + name, localStorage.getItem(k));
+          }
+        } else if (k.startsWith(PREFIX + 'texts./')) {
+          const page = k.slice((PREFIX + 'texts.').length);
+          if (!localStorage.getItem(txtFrom + page)) {
+            localStorage.setItem(PREFIX + 'texts.' + toId + '.' + page, localStorage.getItem(k));
+          }
+        }
+      }
+    });
+  },
+
   /** @returns {Array|null} saved collection (active variant) or null */
   loadCollection(name) {
     const variant = this.getActiveVariant();
