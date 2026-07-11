@@ -110,18 +110,11 @@
   border-radius: var(--radius-tile-featured);
 }
 
-/* Hover: EVERY card floods ink — black fill, white text, no lift */
-.story-tile:hover {
-  background: var(--canvas-inverted);
-  border-color: var(--canvas-inverted);
-  color: var(--hazard-white);
-}
-.story-tile:hover .story-headline { color: var(--hazard-white); }
-.story-tile:hover .story-kicker   { color: rgba(255,255,255,0.55); opacity: 1; }
-.story-tile:hover .story-deck     { color: rgba(255,255,255,0.80); }
-.story-tile:hover .story-meta     { color: rgba(255,255,255,0.75); border-top-color: rgba(255,255,255,0.20); }
+/* Achievement tile hover: color only, no lift (getdesign §4) */
+.story-tile:hover { border-color: var(--hairline-dark); }
+.story-tile:hover .story-headline { color: var(--verge-ultraviolet); }
 
-/* Mint accent tile */
+/* Mint accent tile — inverts to black on hover */
 .story-tile.mint {
   background: var(--jelly-mint);
   color: var(--absolute-black);
@@ -130,6 +123,15 @@
 .story-tile.mint .story-headline { color: var(--absolute-black); }
 .story-tile.mint .story-kicker   { color: var(--absolute-black); opacity: 0.65; }
 .story-tile.mint .story-meta     { border-top-color: rgba(0, 0, 0, 0.12); }
+.story-tile.mint:hover {
+  background: var(--absolute-black);
+  border-color: var(--absolute-black);
+  color: var(--hazard-white);
+}
+.story-tile.mint:hover .story-headline { color: var(--hazard-white); }
+.story-tile.mint:hover .story-kicker   { color: rgba(255,255,255,0.55); opacity: 1; }
+.story-tile.mint:hover .story-deck     { color: rgba(255,255,255,0.80); }
+.story-tile.mint:hover .story-meta     { color: rgba(255,255,255,0.75); border-top-color: rgba(255,255,255,0.20); }
 
 .story-tile.uv-border .story-kicker { color: var(--verge-ultraviolet); opacity: 1; }
 .story-tile.uv-border .story-meta   { border-top-color: rgba(82, 0, 255, 0.15); }
