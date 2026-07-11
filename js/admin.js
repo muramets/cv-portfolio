@@ -1,11 +1,11 @@
 // Admin mode: inline editing, add/delete entities, toolbar.
 // Initialized ONLY when auth.isAdmin() — public visitors never load this UI.
 
-import { ENTITY_TYPES } from './entities.js?v=5';
-import { store } from './store.js?v=5';
-import { renderCollection } from './render.js?v=5';
-import { logout } from './auth.js?v=5';
-import { makeSortable, createHandle } from './dnd.js?v=5';
+import { ENTITY_TYPES } from './entities.js?v=7';
+import { store } from './store.js?v=7';
+import { renderCollection, getItems, applyTexts } from './render.js?v=7';
+import { logout } from './auth.js?v=7';
+import { makeSortable, createHandle } from './dnd.js?v=7';
 
 let pageState = null; // { name: { container, items } }
 
@@ -232,6 +232,116 @@ function injectAddButtons() {
   });
 }
 
+/* ── Content variants (personas) — The Verge-style tab toggle ── */
+
+function switchVariant(id) {
+  store.setActiveVariant(id);
+  Object.keys(pageState).forEach(name => {
+    pageState[name].items = getItems(name);
+    rerender(name);
+  });
+  applyTexts(); // persona owns the page copy too (hero deck, footer, titles)
+  undoStack.length = 0; // undo entries belong to the previous variant
+  renderVariantBar();
+}
+
+function addVariant() {
+  const variants = store.getVariants();
+  const id = 'v' + Date.now().toString(36);
+  const label = 'Variant ' + (variants.length + 1);
+  // start the new persona as a copy of what's currently on screen
+  const snapshot = Object.fromEntries(
+    Object.keys(pageState).map(name => [name, structuredClone(pageState[name].items)]));
+  variants.push({ id, label });
+  store.saveVariants(variants);
+  store.setActiveVariant(id);
+  Object.entries(snapshot).forEach(([name, items]) => store.saveCollection(name, items));
+  switchVariant(id);
+}
+
+function deleteVariant(id) {
+  let variants = store.getVariants().filter(v => v.id !== id);
+  if (!variants.length) return; // never delete the last persona
+  store.saveVariants(variants);
+  store.deleteVariantData(id);
+  switchVariant(store.getActiveVariant() === id ? variants[0].id : store.getActiveVariant());
+}
+
+function renameVariant(id, label) {
+  const variants = store.getVariants();
+  const v = variants.find(v => v.id === id);
+  // collapse nbsp (inserted while typing) and duplicate whitespace
+  const clean = label.replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
+  if (v && clean) { v.label = clean; store.saveVariants(variants); }
+  renderVariantBar();
+}
+
+function renderVariantBar() {
+  const shell = document.querySelector('.variant-bar');
+  if (!shell) return;
+  const active = store.getActiveVariant();
+  const inner = shell.querySelector('.variant-bar-inner');
+  inner.innerHTML = '';
+
+  store.getVariants().forEach(v => {
+    const tab = document.createElement('span');
+    tab.className = 'variant-tab' + (v.id === active ? ' is-active' : '');
+
+    const label = document.createElement('button');
+    label.className = 'variant-tab-label';
+    label.textContent = v.label;
+    label.title = 'Click to switch · double-click to rename';
+    label.addEventListener('click', () => { if (v.id !== active) switchVariant(v.id); });
+    label.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      label.contentEditable = 'true';
+      label.focus();
+      const done = () => {
+        label.contentEditable = 'false';
+        renameVariant(v.id, label.textContent);
+      };
+      label.addEventListener('blur', done, { once: true });
+      label.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter' || ev.key === 'Escape') { ev.preventDefault(); label.blur(); }
+        // <button> would treat Space as a click — insert the space instead
+        if (ev.key === ' ') { ev.preventDefault(); document.execCommand('insertText', false, ' '); }
+      });
+    });
+    tab.append(label);
+
+    if (store.getVariants().length > 1) {
+      const del = document.createElement('button');
+      del.className = 'variant-tab-del';
+      del.textContent = '×';
+      del.title = 'Delete this persona';
+      del.addEventListener('click', e => { e.stopPropagation(); deleteVariant(v.id); });
+      tab.append(del);
+    }
+    inner.append(tab);
+  });
+
+  const add = document.createElement('button');
+  add.className = 'variant-tab-add';
+  add.textContent = '+';
+  add.title = 'New persona (copies the current one)';
+  add.addEventListener('click', addVariant);
+  inner.append(add);
+}
+
+function injectVariantBar() {
+  // Top-level control: personas swap the whole site's content
+  // (collections AND page texts). On About it sits in the hero button
+  // row (next to Email Me); pages without hero buttons get it on the
+  // nav row instead.
+  const shell = document.createElement('div');
+  shell.className = 'variant-bar';
+  shell.innerHTML = '<div class="variant-bar-inner"></div>';
+  const heroButtons = document.querySelector('.hero-buttons');
+  if (heroButtons) heroButtons.append(shell);
+  else document.querySelector('.vnav')?.prepend(shell);
+  renderVariantBar();
+}
+
 /* ── Toolbar ───────────────────────────────────────────────── */
 
 const EDITING_KEY = 'cv.v1.editing';
@@ -288,6 +398,7 @@ export function initAdmin(state) {
   });
   initBlockSorting();
   injectAddButtons();
+  injectVariantBar();
   injectToolbar();
   setEditing(isEditing());
 }

@@ -58,6 +58,20 @@ Content resolution: `localStorage override → seed (content.js)`.
 `store.js` is the only module touching persistence; replacing it with a
 REST adapter later changes nothing else.
 
+### Content variants (personas)
+
+A segmented pill toggle (styled after The Verge's LATEST/FOLLOWING switch)
+lets the admin maintain several complete CV versions — one per target
+vacancy. Each variant owns its collections (achievements, roles, cards)
+AND all page texts (hero deck, titles, footers). The active variant is
+what renders for visitors.
+
+- Toggle sits in the hero button row on About (nav row on subpages)
+- `+` creates a new persona as a copy of the current one
+- Click a tab to switch · double-click to rename · × to delete
+- Storage: `cv.v1.col.<variant>.<name>`, `cv.v1.texts.<variant>.<page>`;
+  pre-variant keys are read as the "default" variant's data
+
 ### Admin mode
 
 - Enter: open any page with `?admin=on` · Leave entirely: "Log out" or `?admin=off`

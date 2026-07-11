@@ -115,6 +115,79 @@
   background: rgba(82, 0, 255, 0.04);
 }
 
+/* Variant (persona) toggle — segmented pill exactly like The Verge's
+   LATEST / FOLLOWING switch: dark slate track, mint pill on the active
+   segment, no underlines. Admin-only (injected by admin.js). */
+.variant-bar {
+  display: none;
+  align-items: center;
+}
+.is-admin .variant-bar { display: inline-flex; }
+
+/* On the nav row (subpages) push the toggle to the left edge */
+.vnav > .variant-bar { margin-right: auto; }
+
+.variant-bar-inner {
+  display: inline-flex;
+  align-items: center;
+  background: #2d2d2d;
+  border-radius: 999px;
+  padding: 4px;
+  gap: 2px;
+}
+
+.variant-tab {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+}
+
+.variant-tab-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #bdbdbd;
+  padding: 6px 16px;
+  border-radius: 999px;
+  transition: color 150ms ease, background 150ms ease;
+  outline: none;
+}
+.variant-tab-label:hover { color: #ffffff; }
+
+.variant-tab.is-active .variant-tab-label {
+  background: var(--jelly-mint);
+  color: var(--absolute-black);
+}
+.variant-tab.is-active .variant-tab-label:hover { color: var(--absolute-black); }
+
+.variant-tab-del {
+  color: #8c8c8c;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 8px 0 2px;
+  opacity: 0;
+  transition: opacity 150ms ease, color 150ms ease;
+}
+.variant-tab:hover .variant-tab-del { opacity: 1; }
+.variant-tab-del:hover { color: #ff6b6b; }
+
+.variant-tab-add {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: #bdbdbd;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 150ms ease, background 150ms ease;
+}
+.variant-tab-add:hover { color: var(--absolute-black); background: var(--jelly-mint); }
+
 /* Admin toolbar — fixed bottom-right */
 .admin-toolbar {
   display: none;

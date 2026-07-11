@@ -9,27 +9,69 @@ function key(kind, name) {
 }
 
 export const store = {
-  /** @returns {Array|null} saved collection or null if untouched */
+  /* ── Content variants (personas) ─────────────────────────────
+     Each variant owns its own copy of every collection, so the CV
+     can be tailored per vacancy. The active variant is what
+     renders — for visitors as well (admin picks, everyone sees). */
+
+  getVariants() {
+    const raw = localStorage.getItem(PREFIX + 'variants');
+    try {
+      const list = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(list) && list.length) return list;
+    } catch { /* fall through */ }
+    return [{ id: 'default', label: 'Default' }];
+  },
+
+  saveVariants(list) {
+    localStorage.setItem(PREFIX + 'variants', JSON.stringify(list));
+  },
+
+  getActiveVariant() {
+    return localStorage.getItem(PREFIX + 'variant.active') || 'default';
+  },
+
+  setActiveVariant(id) {
+    localStorage.setItem(PREFIX + 'variant.active', id);
+  },
+
+  deleteVariantData(id) {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith(PREFIX + 'col.' + id + '.')
+                || k.startsWith(PREFIX + 'texts.' + id + '.'))
+      .forEach(k => localStorage.removeItem(k));
+  },
+
+  /** @returns {Array|null} saved collection (active variant) or null */
   loadCollection(name) {
-    const raw = localStorage.getItem(key('col', name));
+    const variant = this.getActiveVariant();
+    const raw = localStorage.getItem(key('col', variant + '.' + name))
+      // legacy pre-variant key counts as the default variant's data
+      ?? (variant === 'default' ? localStorage.getItem(key('col', name)) : null);
     if (!raw) return null;
     try { return JSON.parse(raw); } catch { return null; }
   },
 
   saveCollection(name, items) {
-    localStorage.setItem(key('col', name), JSON.stringify(items));
+    const variant = this.getActiveVariant();
+    localStorage.setItem(key('col', variant + '.' + name), JSON.stringify(items));
   },
 
-  /** Singleton texts are scoped per page — every page owns its footer,
-      titles, etc. @returns {Object} map of textId -> html */
+  /** Singleton texts are scoped per variant AND per page — the persona
+      toggle swaps page copy (hero deck, footers, titles) along with
+      collections. @returns {Object} map of textId -> html */
   loadTexts(page) {
-    const raw = localStorage.getItem(key('texts', page));
+    const variant = this.getActiveVariant();
+    const raw = localStorage.getItem(key('texts', variant + '.' + page))
+      // legacy pre-variant key counts as the default variant's data
+      ?? (variant === 'default' ? localStorage.getItem(key('texts', page)) : null);
     if (!raw) return {};
     try { return JSON.parse(raw) || {}; } catch { return {}; }
   },
 
   saveTexts(page, map) {
-    localStorage.setItem(key('texts', page), JSON.stringify(map));
+    const variant = this.getActiveVariant();
+    localStorage.setItem(key('texts', variant + '.' + page), JSON.stringify(map));
   },
 
   /** @returns {string[]|null} saved block order for a page, or null */
