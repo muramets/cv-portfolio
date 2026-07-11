@@ -198,17 +198,8 @@
   position: relative;
 }
 
-.timeline-item::before {
-  content: '';
-  position: absolute;
-  left: -40px;
-  top: 10px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--canvas);
-  border: 2px solid var(--verge-ultraviolet);
-}
+/* Timeline Rail reference: no dots — cards pin to the dashed rail
+   by their mono timestamps alone */
 
 .timeline-meta {
   display: flex;
@@ -226,27 +217,28 @@
   transition: color 200ms ease;
 }
 
-/* Per-role accent — full saturated fill on hover (color-as-elevation) */
-.timeline-item.accent-uv   { --role-color: var(--verge-ultraviolet); --role-bg: var(--verge-ultraviolet); --role-text: #ffffff; }
-.timeline-item.accent-mint { --role-color: var(--jelly-mint); --role-bg: var(--jelly-mint); --role-text: #000000; }
+/* Per-role hover accent for the title in the meta column */
+.timeline-item.accent-uv     { --role-color: var(--verge-ultraviolet); }
+.timeline-item.accent-mint   { --role-color: var(--jelly-mint); }
 /* acid yellow is unreadable on white — the title hovers in the system's
-   official link-hover token instead; the card fill stays yellow */
-.timeline-item.accent-yellow { --role-color: var(--deep-link-blue); --role-bg: var(--acid-yellow); --role-text: #000000; }
-.timeline-item.accent-ink    { --role-color: var(--canvas-inverted); --role-bg: var(--canvas-inverted); --role-text: #ffffff; }
+   official link-hover token instead */
+.timeline-item.accent-yellow { --role-color: var(--deep-link-blue); }
+.timeline-item.accent-ink    { --role-color: var(--canvas-inverted); }
 
 .timeline-item:hover .timeline-meta h4 { color: var(--role-color); }
+
+/* Card highlight: mint flood, black text — Timeline Rail reference */
 .timeline-item:hover .timeline-body {
-  background: var(--canvas-inverted);
-  border-color: var(--canvas-inverted);
-  color: var(--hazard-white);
+  background: var(--jelly-mint);
+  color: var(--absolute-black);
 }
 .timeline-item:hover .timeline-body .story-deck,
 .timeline-item:hover .timeline-body .timeline-bullets li {
-  color: var(--hazard-white);
+  color: var(--absolute-black);
   opacity: 1;
 }
 .timeline-item:hover .timeline-body .timeline-bullets li::before {
-  color: var(--hazard-white);
+  color: var(--absolute-black);
   opacity: 0.5;
 }
 
@@ -268,39 +260,18 @@
   margin-top: 4px;
 }
 
+/* Timeline Rail reference: identical pill-cornered gray tiles,
+   no borders — the mint hover flood is the only state change */
 .timeline-body {
   padding: 24px 28px;
-  border-radius: var(--radius-tile);
-  background: var(--canvas);   /* white — depth is borders, not fills */
-  border: 1px solid var(--hairline);
+  border-radius: var(--radius-tile-featured);
+  background: var(--surface-slate);
+  border: none;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: border-color 200ms ease, background 200ms ease, box-shadow 200ms ease;
+  transition: background 200ms ease;
 }
-
-/* The Verge depth scale, applied by role age (docs/DESIGN.md §Depth):
-   the further from the first role, the deeper the elevation level.
-   2 hairline · 3 mint outline · 4 UV outline · 5 atmospheric ring ·
-   6 inset mint underline · 7 saturated mint fill */
-.timeline-body.depth-2 { border-color: var(--hairline); }
-.timeline-body.depth-3 { border-color: var(--console-mint-border); }
-.timeline-body.depth-4 { border-color: var(--verge-ultraviolet); }
-.timeline-body.depth-5 { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.33); }
-.timeline-body.depth-6 {
-  background: var(--surface-slate);  /* the one gray card in the scale */
-  box-shadow: inset 0 -2px 0 0 var(--jelly-mint);
-}
-.timeline-body.depth-7 {
-  background: var(--jelly-mint);
-  border-color: var(--console-mint-border);
-}
-.timeline-body.depth-7 .story-deck,
-.timeline-body.depth-7 .timeline-bullets li { color: rgba(0, 0, 0, 0.80); }
-.timeline-body.depth-7 .timeline-bullets li::before { color: var(--absolute-black); }
-
-/* Accent flood on hover overrides the resting depth treatment */
-.timeline-item:hover .timeline-body { box-shadow: none; }
 
 .timeline-bullets {
   display: flex;

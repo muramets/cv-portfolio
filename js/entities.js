@@ -36,14 +36,9 @@ function renderCard(entity) {
   return tile;
 }
 
-/* Official card palette only: ultraviolet, mint, acid yellow, ink */
+/* Role title hover accents (official card palette). Card bodies are
+   identical per the Timeline Rail reference — gray tile, mint hover. */
 const ROLE_ACCENTS = ['accent-uv', 'accent-mint', 'accent-yellow', 'accent-ink'];
-
-/* The Verge depth scale (docs/DESIGN.md §Depth), loudest first: the
-   newest role starts at level 6 (gray + inset mint underline) and each
-   older role steps down — 5 ring, 4 UV outline, 3 mint outline,
-   2 hairline for everything older. Level 7 (mint fill) is reserved. */
-const ROLE_DEPTHS = ['depth-6', 'depth-5', 'depth-4', 'depth-3', 'depth-2'];
 
 export const ENTITY_TYPES = {
 
@@ -78,7 +73,7 @@ export const ENTITY_TYPES = {
       time.dataset.field = 'period';
       meta.append(title, company, time);
 
-      const body = el('div', 'timeline-body ' + ROLE_DEPTHS[Math.min(index, ROLE_DEPTHS.length - 1)]);
+      const body = el('div', 'timeline-body');
       const deck = el('p', 'story-deck', f.deck);
       deck.dataset.field = 'deck';
       const bullets = el('ul', 'timeline-bullets');
