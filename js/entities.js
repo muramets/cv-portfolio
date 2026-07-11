@@ -38,6 +38,10 @@ function renderCard(entity) {
 
 const ROLE_ACCENTS = ['accent-uv', 'accent-mint', 'accent-warm'];
 
+/* The Verge depth scale (docs/DESIGN.md §Depth): the further a role sits
+   from the first one, the deeper the elevation level of its card. */
+const ROLE_DEPTHS = ['depth-2', 'depth-3', 'depth-4', 'depth-5', 'depth-6', 'depth-7'];
+
 export const ENTITY_TYPES = {
 
   achievement: {
@@ -71,7 +75,7 @@ export const ENTITY_TYPES = {
       time.dataset.field = 'period';
       meta.append(title, company, time);
 
-      const body = el('div', 'timeline-body');
+      const body = el('div', 'timeline-body ' + ROLE_DEPTHS[Math.min(index, ROLE_DEPTHS.length - 1)]);
       const deck = el('p', 'story-deck', f.deck);
       deck.dataset.field = 'deck';
       const bullets = el('ul', 'timeline-bullets');

@@ -1,11 +1,11 @@
 // Admin mode: inline editing, add/delete entities, toolbar.
 // Initialized ONLY when auth.isAdmin() — public visitors never load this UI.
 
-import { ENTITY_TYPES } from './entities.js?v=8';
-import { store } from './store.js?v=8';
-import { renderCollection, getItems, applyTexts } from './render.js?v=8';
-import { logout } from './auth.js?v=8';
-import { makeSortable, createHandle } from './dnd.js?v=8';
+import { ENTITY_TYPES } from './entities.js?v=9';
+import { store } from './store.js?v=9';
+import { renderCollection, getItems, applyTexts } from './render.js?v=9';
+import { logout } from './auth.js?v=9';
+import { makeSortable, createHandle } from './dnd.js?v=9';
 
 let pageState = null; // { name: { container, items } }
 
