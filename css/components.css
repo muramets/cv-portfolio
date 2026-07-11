@@ -266,12 +266,14 @@
   padding: 24px 28px;
   border-radius: var(--radius-tile-featured);
   background: var(--surface-slate);
-  border: none;
+  border: 1px solid var(--hairline);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: background 200ms ease;
+  transition: background 200ms ease, border-color 200ms ease;
 }
+
+.timeline-item:hover .timeline-body { border-color: var(--console-mint-border); }
 
 .timeline-bullets {
   display: flex;
