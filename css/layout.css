@@ -307,6 +307,7 @@
 .footer-col a.btn-tag {
   display: inline-block;
   margin-top: 8px;
+  padding: 8px 16px;   /* match the height rhythm of the other pills */
   color: var(--absolute-black);
   opacity: 1;
   font-size: 11px;
