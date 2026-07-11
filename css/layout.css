@@ -267,6 +267,7 @@
   background: var(--canvas-inverted);
   color: var(--inverted-text);
   padding: 56px var(--gutter);
+  margin-top: auto; /* sticky footer: pushes to the bottom on short pages */
 }
 
 .footer-shell { max-width: var(--container); margin: 0 auto; }

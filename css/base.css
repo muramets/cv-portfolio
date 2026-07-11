@@ -16,6 +16,10 @@ body {
   font-weight: 500;
   line-height: 1.60;
   overflow-x: hidden;
+  /* Sticky footer: page fills the viewport, footer pinned to the bottom */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 a {
