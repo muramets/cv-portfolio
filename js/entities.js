@@ -36,7 +36,8 @@ function renderCard(entity) {
   return tile;
 }
 
-const ROLE_ACCENTS = ['accent-uv', 'accent-mint', 'accent-warm'];
+/* Official card palette only: ultraviolet, mint, acid yellow, ink */
+const ROLE_ACCENTS = ['accent-uv', 'accent-mint', 'accent-yellow', 'accent-ink'];
 
 /* The Verge depth scale (docs/DESIGN.md §Depth), loudest first: the
    newest role gets the saturated mint fill (level 7) and each older
