@@ -1,10 +1,11 @@
 // Bootstrap: auth → texts → collections → (admin UI if authorized).
 
 import { initAuth, isAdmin } from './auth.js';
-import { renderPage, applyTexts } from './render.js';
+import { renderPage, applyTexts, applyBlockOrder } from './render.js';
 
 initAuth();
 applyTexts();
+applyBlockOrder();
 const state = renderPage();
 
 if (isAdmin()) {

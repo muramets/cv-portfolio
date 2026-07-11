@@ -49,14 +49,15 @@
   box-shadow: 0 0 0 1px #c2c2c2;
 }
 
-/* Tertiary — official light-theme spec: text AND border #309875 */
-.btn-outline-mint {
+/* Tertiary — outlined ultraviolet (official light-preview variant,
+   "Read Review": 1px #5200ff border + text, radius 30px) */
+.btn-outline-uv {
   display: inline-block;
   background: transparent;
-  color: var(--console-mint-border);
+  color: var(--verge-ultraviolet);
   padding: 10px 20px;
-  border: 1px solid var(--console-mint-border);
-  border-radius: var(--radius-pill-outline);
+  border: 1px solid var(--verge-ultraviolet);
+  border-radius: var(--radius-pill-promo);
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
@@ -64,9 +65,9 @@
   text-transform: uppercase;
   transition: background 150ms ease, color 150ms ease;
 }
-.btn-outline-mint:hover {
-  background: var(--jelly-mint);
-  color: var(--absolute-black);
+.btn-outline-uv:hover {
+  background: var(--verge-ultraviolet);
+  color: var(--hazard-white);
 }
 
 .btn-tag {

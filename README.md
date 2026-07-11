@@ -35,7 +35,8 @@ js/
   entities.js       entity type registry (achievement, role, card)
   content.js        seed content (default state of all collections)
   render.js         data → DOM, no admin chrome
-  admin.js          inline editing, add/delete, toolbar (lazy-loaded)
+  admin.js          inline editing, add/delete/reorder, toolbar (lazy-loaded)
+  dnd.js            generic drag-and-drop sorting (entities and page blocks)
   main.js           bootstrap
 docs/
   DESIGN.md         design source of truth (see below)
@@ -63,7 +64,10 @@ REST adapter later changes nothing else.
 - Toolbar (bottom-left): "Editing: On/Off" toggle, Reset (drop local edits,
   restore seeds), Log out
 - Double-click any field or marked text to edit; blur/Escape saves
-- Hover an entity → × delete button; below each collection → add button
+- Hover an entity → × delete button + ⠿ drag handle; below each collection →
+  add button
+- Drag handles reorder entities within a collection AND whole page blocks
+  (`data-block-id` sections). Both orders persist and apply for all visitors.
 - While editing is On, clicks on editable links/buttons don't navigate
 - Public visitors: `admin.js` isn't even loaded; zero edit UI in the DOM
 
@@ -88,7 +92,6 @@ The old root-level `DESIGN.md` npm export is deprecated — don't reintroduce it
 ## Known limitations (MVP)
 
 - Edits live in the browser's localStorage — they are per-browser, not synced.
-- No entity reordering UI yet (edit `content.js` seeds or delete/re-add).
 - Card variant (mint/featured) not switchable from the UI yet.
 - Header/footer markup duplicated across pages (no build step); extract to a
   template if a static-site generator is introduced.

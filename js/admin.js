@@ -5,6 +5,7 @@ import { ENTITY_TYPES } from './entities.js';
 import { store } from './store.js';
 import { renderCollection } from './render.js';
 import { logout } from './auth.js';
+import { makeSortable, createHandle } from './dnd.js';
 
 let pageState = null; // { name: { container, items } }
 
@@ -91,7 +92,33 @@ function decorateEntities(name) {
       e.stopPropagation();
       deleteEntity(name, node.dataset.entityId);
     });
-    node.append(btn);
+    node.append(btn, createHandle('Drag to reorder'));
+  });
+}
+
+/* Persist the DOM order of a collection back into its items array. */
+function commitEntityOrder(name) {
+  const state = pageState[name];
+  const domOrder = [...state.container.querySelectorAll('[data-entity-id]')]
+    .map(node => node.dataset.entityId);
+  state.items.sort((a, b) => domOrder.indexOf(a.id) - domOrder.indexOf(b.id));
+  store.saveCollection(name, state.items);
+  rerender(name); // re-render so index-based styling (role accents) follows
+}
+
+/* Whole page blocks ([data-block-id]) are sortable too. */
+function initBlockSorting() {
+  const blocks = [...document.querySelectorAll('[data-block-id]')];
+  if (blocks.length < 2) return;
+  blocks.forEach(block => block.append(createHandle('Drag to move block')));
+  makeSortable({
+    container: blocks[0].parentNode,
+    itemSelector: '[data-block-id]',
+    onReorder() {
+      const ids = [...document.querySelectorAll('[data-block-id]')]
+        .map(b => b.dataset.blockId);
+      store.saveBlockOrder(location.pathname, ids);
+    },
   });
 }
 
@@ -174,7 +201,15 @@ export function initAdmin(state) {
   document.body.classList.add('admin-authed');
   document.addEventListener('dblclick', onDblClick);
   document.addEventListener('click', onClickGuard, true);
-  Object.keys(pageState).forEach(decorateEntities);
+  Object.keys(pageState).forEach(name => {
+    decorateEntities(name);
+    makeSortable({
+      container: pageState[name].container,
+      itemSelector: '[data-entity-id]',
+      onReorder: () => commitEntityOrder(name),
+    });
+  });
+  initBlockSorting();
   injectAddButtons();
   injectToolbar();
   setEditing(isEditing());

@@ -50,6 +50,45 @@
 
 .timeline-item { position: relative; }
 
+/* Drag handles — appear on hover, entities top-left, blocks top-left */
+.drag-handle {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 150ms ease, background 150ms ease;
+  cursor: grab;
+  z-index: 10;
+}
+.drag-handle:active { cursor: grabbing; }
+.drag-handle:hover { background: var(--verge-ultraviolet); }
+
+.is-admin [data-block-id] { position: relative; }
+
+.is-admin .story-tile:hover > .drag-handle,
+.is-admin .timeline-item:hover > .drag-handle,
+.is-admin [data-block-id]:hover > .drag-handle { opacity: 1; }
+
+/* Timeline items: handle sits on the rail, not over the role title */
+.is-admin .timeline-item > .drag-handle { left: -48px; top: 2px; }
+
+/* Item being dragged */
+.is-dragging {
+  opacity: 0.45;
+  outline: 2px dashed var(--verge-ultraviolet);
+  outline-offset: 4px;
+}
+
 /* Add-entity button under a collection */
 .entity-add {
   display: none;

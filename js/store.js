@@ -31,6 +31,17 @@ export const store = {
     localStorage.setItem(key('map', 'texts'), JSON.stringify(map));
   },
 
+  /** @returns {string[]|null} saved block order for a page, or null */
+  loadBlockOrder(page) {
+    const raw = localStorage.getItem(key('blocks', page));
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  },
+
+  saveBlockOrder(page, ids) {
+    localStorage.setItem(key('blocks', page), JSON.stringify(ids));
+  },
+
   /** Drop all local overrides — site falls back to seed content. */
   resetAll() {
     Object.keys(localStorage)

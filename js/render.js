@@ -49,3 +49,19 @@ export function applyTexts() {
     if (saved !== undefined) node.innerHTML = saved;
   });
 }
+
+/** Reorder page blocks ([data-block-id] sections) per saved order.
+    Runs for every visitor — block order is content, not admin chrome. */
+export function applyBlockOrder() {
+  const ids = store.loadBlockOrder(location.pathname);
+  if (!ids) return;
+  const blocks = [...document.querySelectorAll('[data-block-id]')];
+  if (blocks.length < 2) return;
+  const byId = new Map(blocks.map(b => [b.dataset.blockId, b]));
+  const anchor = blocks[blocks.length - 1].nextSibling; // whatever follows the last block
+  const parent = blocks[0].parentNode;
+  ids.forEach(id => {
+    const block = byId.get(id);
+    if (block) parent.insertBefore(block, anchor);
+  });
+}
