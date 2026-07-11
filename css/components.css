@@ -268,7 +268,7 @@
 .timeline-body {
   padding: 24px 28px;
   border-radius: var(--radius-tile);
-  background: var(--surface-slate);
+  background: var(--canvas);   /* white — depth is borders, not fills */
   border: 1px solid var(--hairline);
   display: flex;
   flex-direction: column;
@@ -284,7 +284,10 @@
 .timeline-body.depth-3 { border-color: var(--console-mint-border); }
 .timeline-body.depth-4 { border-color: var(--verge-ultraviolet); }
 .timeline-body.depth-5 { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.33); }
-.timeline-body.depth-6 { box-shadow: inset 0 -2px 0 0 var(--jelly-mint); }
+.timeline-body.depth-6 {
+  background: var(--surface-slate);  /* the one gray card in the scale */
+  box-shadow: inset 0 -2px 0 0 var(--jelly-mint);
+}
 .timeline-body.depth-7 {
   background: var(--jelly-mint);
   border-color: var(--console-mint-border);
