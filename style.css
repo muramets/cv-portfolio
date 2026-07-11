@@ -752,6 +752,42 @@ section.preview-section {
 /* ─────────────────────────────────────────────────────────
    EDIT TOOLTIP
 ───────────────────────────────────────────────────────── */
+/* Delete button — appears on hover over story-tile or timeline-item */
+.story-tile,
+.timeline-item {
+  position: relative;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 150ms ease, background 150ms ease;
+  z-index: 10;
+}
+
+.story-tile:hover .delete-btn,
+.timeline-item:hover .delete-btn {
+  opacity: 1;
+}
+
+.delete-btn:hover {
+  background: #d00;
+}
+
 .add-item-btn {
   display: flex;
   align-items: center;

@@ -235,7 +235,7 @@
     const ACCENTS = ['accent-uv', 'accent-mint', 'accent-blue'];
     let currentEditable = null;
 
-    // Persist/restore entire container HTML so edits + new items both survive reload
+    // ── Storage ──────────────────────────────────────────────────────────────
     function saveContainer(sel) {
       const el = document.querySelector(sel);
       if (el) localStorage.setItem('cv:' + sel, el.innerHTML);
@@ -252,16 +252,43 @@
     }
 
     function containerOf(el) {
-      if (document.querySelector('.achievements-grid').contains(el)) return '.achievements-grid';
-      if (document.querySelector('.timeline-list').contains(el)) return '.timeline-list';
+      const grid = document.querySelector('.achievements-grid');
+      const list = document.querySelector('.timeline-list');
+      if (grid && grid.contains(el)) return '.achievements-grid';
+      if (list && list.contains(el)) return '.timeline-list';
       return null;
     }
 
-    restoreContainers();
+    // ── Delete buttons ────────────────────────────────────────────────────────
+    function injectDeleteBtn(item, containerSel) {
+      if (item.querySelector('.delete-btn')) return;
+      const btn = document.createElement('button');
+      btn.className = 'delete-btn';
+      btn.setAttribute('aria-label', 'Delete');
+      btn.textContent = '×';
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        item.remove();
+        saveContainer(containerSel);
+      });
+      item.appendChild(btn);
+    }
 
-    // Double-click to edit
+    function injectDeleteBtns() {
+      document.querySelectorAll('.achievements-grid .story-tile').forEach(el =>
+        injectDeleteBtn(el, '.achievements-grid'));
+      document.querySelectorAll('.timeline-list .timeline-item').forEach(el =>
+        injectDeleteBtn(el, '.timeline-list'));
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    restoreContainers();
+    injectDeleteBtns();
+
+    // ── Double-click to edit ──────────────────────────────────────────────────
     document.addEventListener('dblclick', function (e) {
       const target = e.target;
+      if (target.classList.contains('delete-btn')) return;
       if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
       if (target.tagName === 'A') return;
       if (!EDITABLE_TAGS.has(target.tagName)) return;
@@ -290,7 +317,7 @@
       e.preventDefault();
     });
 
-    // Add Achievement
+    // ── Add Achievement ───────────────────────────────────────────────────────
     document.getElementById('addAchievementBtn').addEventListener('click', function () {
       const grid = document.querySelector('.achievements-grid');
       const tile = document.createElement('div');
@@ -301,10 +328,11 @@
         '<p class="story-deck">Describe the achievement or impact here.</p>' +
         '<span class="story-meta">Tag · Tag</span>';
       grid.appendChild(tile);
+      injectDeleteBtn(tile, '.achievements-grid');
       saveContainer('.achievements-grid');
     });
 
-    // Add Role
+    // ── Add Role ──────────────────────────────────────────────────────────────
     document.getElementById('addRoleBtn').addEventListener('click', function () {
       const list = document.querySelector('.timeline-list');
       const count = list.querySelectorAll('.timeline-item').length;
@@ -324,10 +352,11 @@
           '</ul>' +
         '</div>';
       list.appendChild(item);
+      injectDeleteBtn(item, '.timeline-list');
       saveContainer('.timeline-list');
     });
 
-    // Show tooltip on first load
+    // ── Tooltip ───────────────────────────────────────────────────────────────
     const tooltip = document.getElementById('editTooltip');
     setTimeout(() => { tooltip.classList.add('visible'); }, 1200);
     setTimeout(() => { tooltip.classList.remove('visible'); }, 4500);
