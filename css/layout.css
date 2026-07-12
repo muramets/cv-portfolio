@@ -119,7 +119,9 @@
   letter-spacing: 1.07px;
   color: var(--primary-text);
   text-transform: uppercase;
-  padding: 8px 0 12px;
+  /* top guard only: Anton carries its own dead space below the
+     baseline, so extra bottom padding made the lower gap look wider */
+  padding: 8px 0 0;
 }
 
 .masthead-wordmark a { color: inherit; }
