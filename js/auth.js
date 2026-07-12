@@ -21,6 +21,11 @@ export function isAdmin() {
   return localStorage.getItem(ADMIN_KEY) === '1';
 }
 
+export function login() {
+  localStorage.setItem(ADMIN_KEY, '1');
+  location.reload();
+}
+
 export function logout() {
   localStorage.removeItem(ADMIN_KEY);
   location.reload();

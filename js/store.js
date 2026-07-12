@@ -19,6 +19,16 @@ function localJSON(k) {
 
 let REMOTE = null;
 
+/** Canonical page key for text/block scoping. URLs are extensionless
+    (/about, /skillsets) but stored data keys stay in .html form, with
+    the About page canonicalized to its historical /index.html key. */
+export function currentPage() {
+  let p = location.pathname.replace(/\/$/, '');
+  if (p === '' || p === '/about' || p === '/index.html') return '/index.html';
+  if (!p.includes('.')) return p + '.html';
+  return p;
+}
+
 /** Fetch the published content. Must complete before first render. */
 export async function initStore() {
   try {

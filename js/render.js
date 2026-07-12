@@ -1,9 +1,9 @@
 // Rendering: data → DOM. Pure output, no admin chrome — admin.js decorates
 // rendered entities separately when admin mode is on.
 
-import { ENTITY_TYPES } from './entities.js?v=21';
-import { store } from './store.js?v=21';
-import { SEED } from './content.js?v=21';
+import { ENTITY_TYPES } from './entities.js?v=22';
+import { store, currentPage } from './store.js?v=22';
+import { SEED } from './content.js?v=22';
 
 /** Resolve current items for a collection: local override or seed. */
 export function getItems(name) {
@@ -47,7 +47,7 @@ export function renderPage() {
 const originalTexts = new Map();
 
 export function applyTexts() {
-  const texts = store.loadTexts(location.pathname);
+  const texts = store.loadTexts(currentPage());
   document.querySelectorAll('[data-text-id]').forEach(node => {
     const id = node.dataset.textId;
     if (!originalTexts.has(id)) originalTexts.set(id, node.innerHTML);
@@ -59,7 +59,7 @@ export function applyTexts() {
 /** Reorder page blocks ([data-block-id] sections) per saved order.
     Runs for every visitor — block order is content, not admin chrome. */
 export function applyBlockOrder() {
-  const ids = store.loadBlockOrder(location.pathname);
+  const ids = store.loadBlockOrder(currentPage());
   if (!ids) return;
   const blocks = [...document.querySelectorAll('[data-block-id]')];
   if (blocks.length < 2) return;

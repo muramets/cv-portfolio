@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ilia Blinov — Head of Product Portfolio</title>
+  <link rel="stylesheet" href="css/tokens.css?v=22">
+  <link rel="stylesheet" href="css/base.css?v=22">
+  <link rel="stylesheet" href="css/layout.css?v=22">
+  <link rel="stylesheet" href="css/components.css?v=22">
+  <link rel="stylesheet" href="css/motion.css?v=22">
+  <link rel="stylesheet" href="css/admin.css?v=22">
+  <link rel="stylesheet" href="css/print.css?v=22" media="print">
+  <script type="module" src="js/main.js?v=22" blocking="render"></script>
+</head>
+<body>
+
+  <!-- HEADER — The Verge structure: nav top-right, wordmark hero below -->
+  <header class="site-header">
+    <div class="site-header-inner">
+      <nav class="vnav" aria-label="Top Navigation">
+        <ul>
+          <li><a href="about" class="is-active">About</a></li>
+          <li><a href="skillsets">Skillsets</a></li>
+          <li><a href="creator-tools">Creator Tools</a></li>
+          <li><a href="collabs">Collabs</a></li>
+        </ul>
+      </nav>
+
+      <div class="masthead-meta-row">
+        <span class="masthead-kicker" data-text-id="about.kicker">Product Management · Music Tech · Cyprus</span>
+        <span class="masthead-date" data-text-id="about.status">Available for Collaboration</span>
+      </div>
+
+      <div class="masthead-hero-row">
+        <h1 class="masthead-wordmark" data-text-id="about.wordmark">ILIA<br>BLINOV</h1>
+        <div class="masthead-avatar-wrap">
+          <img src="assets/roof.png" alt="Ilia Blinov" class="masthead-avatar">
+        </div>
+      </div>
+
+      <p class="masthead-contacts print-only" data-text-id="about.contacts"><span class="contact-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg></span> muramets007@gmail.com &nbsp;·&nbsp; <span class="contact-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span> +357 97 430 150 &nbsp;·&nbsp; <span class="contact-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span> Cyprus &nbsp;·&nbsp; <span class="contact-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg></span> linkedin.com/in/muramets</p>
+
+      <p class="masthead-deck" data-text-id="about.deck">
+        Head of Product with a proven record of turning raw data into monetization engines and scaling business revenue from five to seven figures monthly.
+      </p>
+      <div class="hero-buttons">
+        <a href="#experience" class="btn-primary" data-text-id="about.cta.primary">View Experience</a>
+        <a href="https://www.linkedin.com/in/muramets/" target="_blank" rel="noopener noreferrer" class="btn-secondary" data-text-id="about.cta.linkedin">LinkedIn</a>
+        <a href="mailto:muramets007@gmail.com" class="btn-outline-uv" data-text-id="about.cta.email">Email Me</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ACHIEVEMENTS -->
+  <section class="section" id="achievements" data-block-id="achievements">
+    <div class="section-container">
+      <span class="section-ribbon" data-text-id="about.achievements.ribbon">Section 01 / Impact</span>
+      <h2 class="section-title" data-text-id="about.achievements.title">Key Achievements</h2>
+      <p class="section-subtitle" data-text-id="about.achievements.subtitle">Balanced story tiles outlining critical business milestones, revenue growth, and workflow automation.</p>
+
+      <div class="tile-grid"
+           data-collection="achievements"
+           data-entity-type="achievement"
+           data-add-label="+ Add Achievement"></div>
+    </div>
+  </section>
+
+  <!-- EXPERIENCE -->
+  <section class="section" id="experience" data-block-id="experience">
+    <div class="section-container">
+      <span class="section-ribbon" data-text-id="about.experience.ribbon">Section 02 / Experience</span>
+      <h2 class="section-title" data-text-id="about.experience.title">Professional Journey</h2>
+      <p class="section-subtitle" data-text-id="about.experience.subtitle">Chronological record of roles in digital publishing and music distribution, pinned to a dashed rail.</p>
+
+      <div class="timeline-list"
+           data-collection="roles"
+           data-entity-type="role"
+           data-add-label="+ Add Role"></div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="section" id="contact" data-block-id="contact">
+    <div class="section-container">
+      <span class="section-ribbon" data-text-id="about.contact.ribbon">Section 03 / Collab</span>
+      <h2 class="section-title" data-text-id="about.contact.title">Get in Touch</h2>
+
+      <form action="mailto:muramets007@gmail.com" method="post" enctype="text/plain" class="form-stack">
+        <div class="form-field">
+          <label class="form-label" for="name" data-text-id="about.form.name">Your Name</label>
+          <input class="form-input" type="text" id="name" name="name" placeholder="John Doe" required>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="email" data-text-id="about.form.email">Email Address</label>
+          <input class="form-input" type="email" id="email" name="email" placeholder="john@example.com" required>
+        </div>
+        <div class="form-field full-width">
+          <label class="form-label" for="message" data-text-id="about.form.message">Project Details</label>
+          <textarea class="form-input form-textarea" id="message" name="message" placeholder="Hi Ilia, I'd like to discuss a project..." required></textarea>
+        </div>
+        <div>
+          <button type="submit" class="btn-primary" data-text-id="about.form.submit">Send Message</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-shell">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h6 data-text-id="footer.contact.title">Contact Details</h6>
+          <span data-text-id="footer.contact.email">Email: <a href="mailto:muramets007@gmail.com">muramets007@gmail.com</a></span>
+          <span data-text-id="footer.contact.phone">Phone: <a href="tel:+35797430150">+35797430150</a></span>
+          <span data-text-id="footer.contact.location">Location: Cyprus</span>
+        </div>
+        <div class="footer-col">
+          <h6 data-text-id="footer.domains.title">Core Domains</h6>
+          <span data-text-id="footer.domains.1">Product Management</span>
+          <span data-text-id="footer.domains.2">Music Licensing</span>
+          <span data-text-id="footer.domains.3">Business Intelligence</span>
+          <span data-text-id="footer.domains.4">Workflow Automation</span>
+        </div>
+        <div class="footer-col">
+          <h6 data-text-id="footer.skills.title">Tech Skills</h6>
+          <span data-text-id="footer.skills.1">DDEX Protocols</span>
+          <span data-text-id="footer.skills.2">Data Visualisation</span>
+          <span data-text-id="footer.skills.3">IT Infrastructure</span>
+          <span data-text-id="footer.skills.4">Process Optimisation</span>
+        </div>
+        <div class="footer-col">
+          <h6 data-text-id="footer.profiles.title">Professional Profiles</h6>
+          <a href="https://www.linkedin.com/in/muramets/" target="_blank" rel="noopener noreferrer" data-text-id="footer.profiles.linkedin">LinkedIn</a>
+          <a href="#" class="btn-tag" data-text-id="footer.profiles.tag">Available for Collab</a>
+        </div>
+      </div>
+      <div class="footer-credit">
+        <div data-text-id="footer.credit.copy">&copy; 2026 Ilia Blinov. All rights reserved.</div>
+        <div data-text-id="footer.credit.design">Inspired by <a href="https://getdesign.md/theverge/design-md" target="_blank" rel="noopener noreferrer">The Verge Design System</a></div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -1,11 +1,11 @@
 // Admin mode: inline editing, add/delete entities, toolbar.
 // Initialized ONLY when auth.isAdmin() — public visitors never load this UI.
 
-import { ENTITY_TYPES } from './entities.js?v=21';
-import { store } from './store.js?v=21';
-import { renderCollection, getItems, applyTexts } from './render.js?v=21';
-import { logout } from './auth.js?v=21';
-import { makeSortable, createHandle } from './dnd.js?v=21';
+import { ENTITY_TYPES } from './entities.js?v=22';
+import { store, currentPage } from './store.js?v=22';
+import { renderCollection, getItems, applyTexts } from './render.js?v=22';
+import { logout } from './auth.js?v=22';
+import { makeSortable, createHandle } from './dnd.js?v=22';
 
 let pageState = null; // { name: { container, items } }
 
@@ -37,7 +37,7 @@ function undo() {
     rerender(entry.name);
 
   } else if (entry.kind === 'text') {
-    const page = location.pathname;
+    const page = currentPage();
     const texts = store.loadTexts(page);
     texts[entry.textId] = entry.prevHtml;
     store.saveTexts(page, texts);
@@ -45,7 +45,7 @@ function undo() {
     if (node) node.innerHTML = entry.prevHtml;
 
   } else if (entry.kind === 'blocks') {
-    store.saveBlockOrder(location.pathname, entry.order);
+    store.saveBlockOrder(currentPage(), entry.order);
     applyBlockOrderDom(entry.order);
     lastBlockOrder = entry.order;
   }
@@ -107,7 +107,7 @@ function commitField(node) {
 function commitText(node, prevHtml) {
   if (prevHtml === node.innerHTML) return; // nothing changed
   pushUndo({ kind: 'text', textId: node.dataset.textId, prevHtml });
-  const page = location.pathname;
+  const page = currentPage();
   const texts = store.loadTexts(page);
   texts[node.dataset.textId] = node.innerHTML;
   store.saveTexts(page, texts);
@@ -193,7 +193,7 @@ function initBlockSorting() {
         .map(b => b.dataset.blockId);
       pushUndo({ kind: 'blocks', order: lastBlockOrder });
       lastBlockOrder = ids;
-      store.saveBlockOrder(location.pathname, ids);
+      store.saveBlockOrder(currentPage(), ids);
     },
   });
 }
