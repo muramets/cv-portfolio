@@ -86,6 +86,16 @@ body {
 }
 .masthead-avatar-wrap::before { display: none; } /* no decorative UV ring */
 
+/* Contact line under the name — print-only element */
+.masthead-contacts {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 8pt;
+  letter-spacing: 0.8px;
+  color: #131313;
+  margin: 0 0 8pt;
+}
+
 .masthead-deck {
   font-size: 10.5pt;
   line-height: 1.35;
@@ -104,8 +114,9 @@ body {
 .site-header--band { --band-ink: #131313; }
 .page-title { font-size: 22pt; color: #131313; padding: 0 0 4pt; }
 
-/* ── Sections: Anton title with the mint underline signature ── */
-.section { margin-bottom: 16pt; }
+/* ── Sections: Anton title with the mint underline signature ──
+   24pt between sections gives the Journey heading room to breathe */
+.section { margin-bottom: 24pt; }
 
 .section-title {
   display: inline-block;
@@ -117,10 +128,12 @@ body {
   padding-bottom: 1pt;
 }
 
-/* ── Achievements: hairline rows; the featured one keeps its mint fill ── */
+/* ── Achievements: identical hairline rows, no accent fills ── */
 .tile-grid { display: block; }
 
-.story-tile {
+.story-tile,
+.story-tile.mint,
+.story-tile.featured {
   background: #fff;
   color: #131313;
   border: none;
@@ -132,24 +145,30 @@ body {
 }
 .tile-grid .story-tile:first-child { border-top: none; padding-top: 0; }
 
-.story-tile.mint {
-  background: #3cffd0;
-  border: none;
-  border-radius: 8pt;
-  padding: 6pt 9pt;
-  margin-bottom: 2pt;
+.story-kicker,
+.story-tile.mint .story-kicker { font-size: 7pt; color: #636363; opacity: 1; letter-spacing: 1.2px; }
+
+/* All achievement headlines: uniform ultraviolet with a diamond mark */
+.story-headline,
+.story-tile.mint .story-headline,
+.story-tile.featured .story-headline {
+  font-size: 11pt;
+  line-height: 1.15;
+  color: #5200ff;
+}
+.story-tile .story-headline::before {
+  content: '◆';
+  color: #5200ff;
+  font-size: 8pt;
+  margin-right: 5pt;
+  vertical-align: 1.5pt;
 }
 
-.story-kicker { font-size: 7pt; color: #309875; opacity: 1; letter-spacing: 1.2px; }
-.story-tile.mint .story-kicker { color: rgba(0, 0, 0, 0.60); }
+.story-deck,
+.story-tile.mint .story-deck { font-size: 9pt; line-height: 1.35; opacity: 1; color: #333; }
 
-.story-headline,
-.story-tile.featured .story-headline { font-size: 11pt; line-height: 1.15; color: #131313; }
-
-.story-deck { font-size: 9pt; line-height: 1.35; opacity: 1; color: #333; }
-.story-tile.mint .story-deck { color: rgba(0, 0, 0, 0.75); }
-
-.story-meta {
+.story-meta,
+.story-tile.mint .story-meta {
   font-size: 7pt;
   color: #8c8c8c;
   opacity: 1;
@@ -158,7 +177,6 @@ body {
   margin-top: 0;
   letter-spacing: 1px;
 }
-.story-tile.mint .story-meta { color: rgba(0, 0, 0, 0.55); }
 
 /* ── Timeline: UV dashed rail, compact two-column rows ── */
 .timeline-list {

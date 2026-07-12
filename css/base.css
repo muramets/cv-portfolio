@@ -39,3 +39,6 @@ button {
 img { max-width: 100%; display: block; }
 
 ul { list-style: none; }
+
+/* Elements that exist only in the printed resume (see css/print.css) */
+.print-only { display: none; }
