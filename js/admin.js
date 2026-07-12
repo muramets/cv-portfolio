@@ -373,10 +373,12 @@ function injectToolbar() {
     <span class="admin-dot"></span>
     <span>Admin</span>
     <button class="admin-toggle" title="Toggle edit mode on/off"></button>
+    <button class="admin-pdf" title="Print / save the active persona as PDF (Cmd+P)">Save PDF</button>
     <button class="admin-reset" title="Discard local edits, restore seed content">Reset</button>
     <button class="admin-exit" title="Leave admin entirely (return via ?admin=on)">Log out</button>
   `;
   bar.querySelector('.admin-toggle').addEventListener('click', () => setEditing(!isEditing()));
+  bar.querySelector('.admin-pdf').addEventListener('click', () => window.print());
   bar.querySelector('.admin-reset').addEventListener('click', () => {
     store.resetAll();
     location.reload();
