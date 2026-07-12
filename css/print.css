@@ -200,13 +200,17 @@ body {
   gap: 0;
 }
 
+/* Roles may split across pages — the page fills fully and only the
+   overflow continues on the next one. Individual bullets stay whole. */
 .timeline-item {
   grid-template-columns: 32mm 1fr;
   gap: 5mm;
   padding: 5pt 0;
   border-top: 0.5pt solid #d4d4d4;
-  break-inside: avoid;
 }
+
+.timeline-bullets li { break-inside: avoid; }
+.timeline-body .story-deck { break-after: avoid; }
 .timeline-list .timeline-item:first-child { border-top: none; padding-top: 0; }
 
 .timeline-meta { padding-top: 0; gap: 1pt; }
