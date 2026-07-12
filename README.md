@@ -3,6 +3,18 @@
 Static portfolio site in The Verge design language (light theme).
 No build step, no framework — ES modules served as-is.
 
+**Live: https://muramets.github.io** (GitHub Pages, deploys on push to main)
+
+## Content & publishing
+
+Published content lives in `data/content.json` — every visitor gets it.
+Admin edits are local drafts (localStorage) layered on top; the
+**Publish** button in the admin toolbar commits the merged state back to
+`data/content.json` through the GitHub API (fine-grained token with
+"Contents: read & write" on this repo only; asked once, kept in the
+browser). Pages redeploys in ~a minute. Reset drops drafts back to the
+published state. Content history = git history.
+
 ## Run
 
 ```bash
