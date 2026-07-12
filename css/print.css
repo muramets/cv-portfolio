@@ -95,7 +95,16 @@ body {
   margin: 0 0 8pt;
 }
 
-.masthead-contacts .contact-icon { color: #5200ff; }
+.masthead-contacts .contact-icon {
+  color: #5200ff;
+  display: inline-block;
+  vertical-align: -1.5pt;
+}
+.masthead-contacts .contact-icon svg {
+  width: 8.5pt;
+  height: 8.5pt;
+  display: inline-block;
+}
 
 /* Web status label (over the avatar) stays on screen only */
 .masthead-date { display: none; }
@@ -150,7 +159,8 @@ body {
 .tile-grid .story-tile:first-child { border-top: none; padding-top: 0; }
 
 .story-kicker,
-.story-tile.mint .story-kicker { font-size: 7pt; color: #636363; opacity: 1; letter-spacing: 1.2px; }
+.story-tile.mint .story-kicker,
+.story-tile.uv-border .story-kicker { font-size: 7pt; color: #636363; opacity: 1; letter-spacing: 1.2px; }
 
 /* Achievement headlines: regular ink, marked by a UV diamond */
 .story-headline,
