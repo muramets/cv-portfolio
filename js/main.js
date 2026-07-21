@@ -1,9 +1,9 @@
 // Bootstrap: remote content → auth → texts → collections →
 // (admin UI if authorized).
 
-import { initAuth, isAdmin, login, logout } from './auth.js?v=34';
-import { initStore } from './store.js?v=34';
-import { renderPage, applyTexts, applyBlockOrder, pruneEmptyNav } from './render.js?v=34';
+import { initAuth, isAdmin, login, logout } from './auth.js?v=35';
+import { initStore } from './store.js?v=35';
+import { renderPage, applyTexts, applyBlockOrder, pruneEmptyNav } from './render.js?v=35';
 
 // Cold load has no inbound view transition (nothing to morph from) —
 // give it a one-time entrance fade instead. Navigations between pages
@@ -28,7 +28,7 @@ applyBlockOrder();
 const state = renderPage();
 
 if (isAdmin()) {
-  const { initAdmin } = await import('./admin.js?v=34');
+  const { initAdmin } = await import('./admin.js?v=35');
   initAdmin(state);
 } else {
   pruneEmptyNav(); // hide links to pages that have nothing on them yet
@@ -90,12 +90,17 @@ function initTimelineCollapse() {
       ?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
     if (reduced) { glide(); return; }
     // fold smoothly — cards stay visible and get clipped by the shrinking
-    // container; once the height settles, glide to Get in Touch
+    // container; once the height settles, glide to Get in Touch.
+    // Browser scroll anchoring would pin the content BELOW the list and
+    // let the folding timeline drift down the screen — turn it off so the
+    // fold happens in place and Get in Touch rises naturally.
+    document.documentElement.style.overflowAnchor = 'none';
     list.classList.remove('is-collapsed');
     list.classList.add('is-collapsing');
     runHeight(from, to, () => {
       list.classList.remove('is-collapsing');
       list.classList.add('is-collapsed');
+      document.documentElement.style.overflowAnchor = '';
       glide();
     });
   }
