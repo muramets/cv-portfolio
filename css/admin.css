@@ -87,6 +87,21 @@
 /* Footer columns: handle sits on the top-right corner of the column */
 .is-admin [data-footer-col-id] > .drag-handle { left: auto; right: 0; top: 0; }
 
+/* Footer lines & card bullets: compact side handles */
+.is-admin .footer-line { position: relative; }
+.is-admin .footer-line > .drag-handle,
+.is-admin .timeline-bullets li > .drag-handle {
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.is-admin .footer-line > .drag-handle { left: -26px; }
+.is-admin .timeline-bullets li > .drag-handle { left: auto; right: -4px; }
+.is-admin .footer-line:hover > .drag-handle,
+.is-admin .timeline-bullets li:hover > .drag-handle { opacity: 1; }
+
 /* Item being dragged */
 .is-dragging {
   opacity: 0.45;
@@ -286,3 +301,39 @@
   margin-bottom: 2px;
 }
 .admin-authed .deck-toggle { display: none; }
+
+/* "+" under a footer line group — admin-only affordance */
+.footer-line-add { display: none; }
+.is-admin .footer-line-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, 0.4);
+  background: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  margin-top: 2px;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+.is-admin .footer-line-add:hover {
+  color: var(--jelly-mint);
+  border-color: var(--jelly-mint);
+}
+
+/* The footer owns a view-transition layer (site-footer); in admin mode
+   hover-driven DOM chrome inside it can glitch that layer's paint —
+   black background clipping to white. Admin doesn't need page-morphing
+   on the footer, so drop it there. */
+.admin-authed .footer { view-transition-name: none; }
+
+/* Empty footer slots collapse to a thin strip in admin — no phantom gap */
+.is-admin .footer-line.is-blank {
+  height: 8px;
+  min-height: 8px;
+  margin-bottom: 4px;
+}

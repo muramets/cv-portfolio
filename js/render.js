@@ -1,9 +1,9 @@
 // Rendering: data → DOM. Pure output, no admin chrome — admin.js decorates
 // rendered entities separately when admin mode is on.
 
-import { ENTITY_TYPES } from './entities.js?v=36';
-import { store, currentPage } from './store.js?v=36';
-import { SEED } from './content.js?v=36';
+import { ENTITY_TYPES } from './entities.js?v=40';
+import { store, currentPage } from './store.js?v=40';
+import { SEED } from './content.js?v=40';
 
 /** Resolve current items for a collection: local override or seed. */
 export function getItems(name) {
@@ -66,6 +66,35 @@ const originalTexts = new Map();
 
 export function applyTexts() {
   const texts = store.loadTexts(currentPage());
+
+  // Materialize numbered footer lines that exist only in the store —
+  // the admin can add footer.<col>.<n> beyond the static markup.
+  document.querySelectorAll('[data-footer-col-id]').forEach(col => {
+    const colId = col.dataset.footerColId;
+    const re = new RegExp('^footer\\.' + colId + '\\.(\\d+)$');
+    const have = new Set(
+      [...col.querySelectorAll('[data-text-id]')].map(n => n.dataset.textId));
+    Object.keys(texts)
+      .map(id => { const m = id.match(re); return m ? Number(m[1]) : null; })
+      .filter(n => n !== null
+        && !have.has('footer.' + colId + '.' + n)
+        // a blank saved slot is a stale scratch line from admin's "+" —
+        // nothing for a visitor to see, so don't materialize a ghost node
+        && texts['footer.' + colId + '.' + n]?.trim())
+      .sort((a, b) => a - b)
+      .forEach(n => {
+        const span = document.createElement('span');
+        span.dataset.textId = 'footer.' + colId + '.' + n;
+        span.dataset.footerDynamic = '1'; // JS-materialized slot, not static markup
+        const numbered = [...col.querySelectorAll('[data-text-id]')]
+          .filter(x => re.test(x.dataset.textId));
+        const next = numbered.find(x => Number(x.dataset.textId.match(re)[1]) > n);
+        if (next) next.before(span);
+        else if (numbered.length) numbered[numbered.length - 1].after(span);
+        else col.append(span);
+      });
+  });
+
   document.querySelectorAll('[data-text-id]').forEach(node => {
     const id = node.dataset.textId;
     if (!originalTexts.has(id)) originalTexts.set(id, node.innerHTML);

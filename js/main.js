@@ -1,9 +1,9 @@
 // Bootstrap: remote content → auth → texts → collections →
 // (admin UI if authorized).
 
-import { initAuth, isAdmin, login, logout } from './auth.js?v=36';
-import { initStore } from './store.js?v=36';
-import { renderPage, applyTexts, applyBlockOrder, applyFooterColOrder, pruneEmptyNav } from './render.js?v=36';
+import { initAuth, isAdmin, login, logout } from './auth.js?v=40';
+import { initStore } from './store.js?v=40';
+import { renderPage, applyTexts, applyBlockOrder, applyFooterColOrder, pruneEmptyNav } from './render.js?v=40';
 
 // Cold load has no inbound view transition (nothing to morph from) —
 // give it a one-time entrance fade instead. Navigations between pages
@@ -29,7 +29,7 @@ applyFooterColOrder();
 const state = renderPage();
 
 if (isAdmin()) {
-  const { initAdmin } = await import('./admin.js?v=36');
+  const { initAdmin } = await import('./admin.js?v=40');
   initAdmin(state);
 } else {
   pruneEmptyNav(); // hide links to pages that have nothing on them yet

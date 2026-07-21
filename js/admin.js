@@ -1,11 +1,11 @@
 // Admin mode: inline editing, add/delete entities, toolbar.
 // Initialized ONLY when auth.isAdmin() — public visitors never load this UI.
 
-import { ENTITY_TYPES } from './entities.js?v=36';
-import { store, currentPage } from './store.js?v=36';
-import { renderCollection, getItems, applyTexts } from './render.js?v=36';
-import { logout } from './auth.js?v=36';
-import { makeSortable, createHandle } from './dnd.js?v=36';
+import { ENTITY_TYPES } from './entities.js?v=40';
+import { store, currentPage } from './store.js?v=40';
+import { renderCollection, getItems, applyTexts } from './render.js?v=40';
+import { logout } from './auth.js?v=40';
+import { makeSortable, createHandle } from './dnd.js?v=40';
 
 let pageState = null; // { name: { container, items } }
 
@@ -53,6 +53,21 @@ function undo() {
     store.saveFooterColOrder(currentPage(), entry.order);
     applyFooterColOrderDom(entry.order);
     lastFooterColOrder = entry.order;
+
+  } else if (entry.kind === 'textsBatch') {
+    const page = currentPage();
+    const texts = store.loadTexts(page);
+    Object.entries(entry.changes).forEach(([id, prevHtml]) => {
+      if (prevHtml === undefined) delete texts[id];
+      else texts[id] = prevHtml;
+      const node = document.querySelector(`[data-text-id="${CSS.escape(id)}"]`);
+      if (node) {
+        node.innerHTML = prevHtml ?? '';
+        decorateFooterLine(node);
+      }
+    });
+    store.saveTexts(page, texts);
+    document.querySelectorAll('[data-footer-col-id]').forEach(placeFooterAddButton);
   }
 }
 
@@ -152,6 +167,257 @@ function removeOutro(node) {
   rerender(name);
 }
 
+/* Editable nodes may carry admin chrome (drag handles) — never let it
+   leak into saved HTML. */
+function cleanHTML(node) {
+  const clone = node.cloneNode(true);
+  clone.querySelectorAll('.drag-handle, .entity-delete').forEach(el => el.remove());
+  return clone.innerHTML;
+}
+
+/* ── Footer lines ─────────────────────────────────────────────
+   Numbered footer texts (footer.<col>.<n>) behave like a list: drag to
+   reorder, Enter appends a line, an emptied line is removed. The text
+   IDs stay pinned to their slots — only the contents move between
+   them, so persistence rides the existing texts store untouched. */
+
+const FOOTER_LINE_RE = /^footer\.([a-z]+)\.(\d+)$/i;
+
+function isFooterLine(node) {
+  return !!(node.dataset?.textId?.match(FOOTER_LINE_RE)
+    && node.closest('[data-footer-col-id]'));
+}
+
+function lineNum(node) {
+  return Number(node.dataset.textId.match(FOOTER_LINE_RE)[2]);
+}
+
+/* Text of a line WITHOUT admin chrome — the handle glyph (⠿) lives in
+   textContent and must never count as content. */
+function lineText(node) {
+  const clone = node.cloneNode(true);
+  clone.querySelectorAll('.drag-handle, .entity-delete').forEach(el => el.remove());
+  return clone.textContent.trim();
+}
+
+function decorateFooterLine(node) {
+  if (!node || !isFooterLine(node)) return;
+  node.classList.add('footer-line');
+  const blank = !lineText(node);
+  // legacy "hidden" lines hold stray <br> markup — flatten to truly empty
+  if (blank && cleanHTML(node) !== '') {
+    node.innerHTML = '';
+  }
+  node.classList.toggle('is-blank', blank); // compact empty slots (CSS)
+  if (!node.querySelector(':scope > .drag-handle')) {
+    node.append(createHandle('Drag to reorder'));
+  }
+}
+
+function footerGroup(node) {
+  const key = node.dataset.textId.match(FOOTER_LINE_RE)[1];
+  const col = node.closest('[data-footer-col-id]');
+  const lines = [...col.querySelectorAll('[data-text-id]')]
+    .filter(n => n.dataset.textId.match(FOOTER_LINE_RE)?.[1] === key)
+    .sort((a, b) => lineNum(a) - lineNum(b));
+  return { col, key, lines };
+}
+
+/* Blank slots that JS materialized (not the 4 static markup lines) are
+   scratch space for the "+" button — if one gets abandoned empty (blur
+   without typing, or a leftover from an earlier session), remove it
+   from both the DOM and the texts store instead of piling up forever. */
+function pruneBlankFooterLines(col) {
+  if (!col) return;
+  const page = currentPage();
+  const texts = store.loadTexts(page);
+  let changed = false;
+
+  col.querySelectorAll('[data-footer-dynamic]').forEach(node => {
+    if (node === document.activeElement || lineText(node)) return;
+    delete texts[node.dataset.textId];
+    node.remove();
+    changed = true;
+  });
+
+  // Also drop blank scratch keys that never got a DOM node at all — render.js
+  // stopped materializing empty footer.<col>.N slots, so old ghost entries
+  // from before that fix would otherwise sit in the store forever.
+  const colId = col.dataset.footerColId;
+  const re = new RegExp('^footer\\.' + colId + '\\.(\\d+)$');
+  Object.keys(texts).forEach(id => {
+    if (re.test(id) && !texts[id]?.trim()) {
+      delete texts[id];
+      changed = true;
+    }
+  });
+
+  if (changed) store.saveTexts(page, texts);
+}
+
+/* The "+" sits right after the last line with content (or straight
+   under the heading when the group is empty) — never below the tail
+   of invisible empty slots. */
+function placeFooterAddButton(col) {
+  const btn = col.querySelector(':scope > .footer-line-add');
+  if (!btn) return;
+  const lines = [...col.querySelectorAll('[data-text-id]')]
+    .filter(n => FOOTER_LINE_RE.test(n.dataset.textId))
+    .sort((a, b) => lineNum(a) - lineNum(b));
+  const lastFilled = [...lines].reverse().find(n => lineText(n));
+  const anchor = lastFilled ?? col.querySelector('h6');
+  if (anchor) anchor.after(btn);
+}
+
+/* Write the given contents into the group's slots (id order), saving
+   every changed text id as one undoable batch. */
+function saveFooterContents(lines, contents) {
+  const page = currentPage();
+  const texts = store.loadTexts(page);
+  const changes = {};
+  lines.forEach((n, i) => {
+    const id = n.dataset.textId;
+    const next = contents[i] ?? '';
+    if (texts[id] !== next) {
+      changes[id] = texts[id];
+      texts[id] = next;
+    }
+    n.innerHTML = next;
+    decorateFooterLine(n);
+  });
+  if (Object.keys(changes).length) {
+    pushUndo({ kind: 'textsBatch', changes });
+    store.saveTexts(page, texts);
+  }
+  if (lines[0]) {
+    const col = lines[0].closest('[data-footer-col-id]');
+    pruneBlankFooterLines(col);
+    placeFooterAddButton(col);
+  }
+}
+
+function insertFooterLineAfter(node) {
+  const { key, lines } = footerGroup(node);
+  const idx = lines.indexOf(node);
+  if (idx === -1) return;
+  const contents = lines.map(cleanHTML);
+  contents.splice(idx + 1, 0, '');
+  // reuse a trailing empty slot before growing the DOM — but never
+  // swallow the very slot we just opened (insert-after-last case)
+  while (contents.length > lines.length
+      && contents.length - 1 > idx + 1
+      && contents[contents.length - 1] === '') {
+    contents.pop();
+  }
+  const all = [...lines];
+  if (contents.length > lines.length) {
+    const last = lines[lines.length - 1];
+    const span = document.createElement('span');
+    span.dataset.textId = 'footer.' + key + '.' + (lineNum(last) + 1);
+    span.dataset.footerDynamic = '1'; // JS-materialized slot, not static markup
+    last.after(span);
+    all.push(span);
+  }
+  saveFooterContents(all, contents);
+  startEditing(all[idx + 1]);
+}
+
+function removeFooterLine(node) {
+  const { lines } = footerGroup(node);
+  const idx = lines.indexOf(node);
+  if (idx === -1) return;
+  const contents = lines.map(cleanHTML);
+  contents.splice(idx, 1);
+  contents.push(''); // the freed slot goes dark at the end
+  saveFooterContents(lines, contents);
+}
+
+function commitFooterLineOrder(col) {
+  const nodes = [...col.querySelectorAll('.footer-line')];
+  const byKey = {};
+  nodes.forEach(n => {
+    const key = n.dataset.textId.match(FOOTER_LINE_RE)[1];
+    (byKey[key] ??= []).push(n); // DOM (visual) order
+  });
+  Object.values(byKey).forEach(domOrder => {
+    if (domOrder.length < 2) return;
+    const contents = domOrder.map(cleanHTML);
+    const canonical = [...domOrder].sort((a, b) => lineNum(a) - lineNum(b));
+    // put the nodes back in id order — contents carry the new sequence
+    const marker = document.createComment('');
+    domOrder[0].before(marker);
+    canonical.forEach(n => marker.before(n));
+    marker.remove();
+    saveFooterContents(canonical, contents);
+  });
+}
+
+function initFooterLineSorting() {
+  document.querySelectorAll('[data-footer-col-id]').forEach(col => {
+    const lines = [...col.querySelectorAll('[data-text-id]')]
+      .filter(n => FOOTER_LINE_RE.test(n.dataset.textId));
+    lines.forEach(decorateFooterLine);
+    if (!lines.length) return;
+    if (!col.dataset.dndLines) {
+      col.dataset.dndLines = '1';
+      makeSortable({
+        container: col,
+        itemSelector: '.footer-line',
+        onReorder: () => commitFooterLineOrder(col),
+      });
+    }
+    if (!col.querySelector(':scope > .footer-line-add')) {
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'footer-line-add';
+      add.textContent = '+';
+      add.title = 'Add line';
+      add.addEventListener('click', () => {
+        const fresh = footerGroup(lines[0]).lines;
+        // an empty slot is already an invitation — reuse it first
+        const empty = fresh.find(n => !lineText(n));
+        if (empty) startEditing(empty);
+        else insertFooterLineAfter(fresh[fresh.length - 1]);
+      });
+      col.append(add);
+    }
+    pruneBlankFooterLines(col);
+    placeFooterAddButton(col);
+  });
+}
+
+/* ── Bullet reordering inside role cards ─────────────────────── */
+
+function decorateBullets(name) {
+  const { container } = pageState[name];
+  container.querySelectorAll('ul.timeline-bullets').forEach(ul => {
+    ul.querySelectorAll(':scope > li').forEach(li => {
+      if (!li.querySelector(':scope > .drag-handle')) {
+        li.append(createHandle('Drag to reorder'));
+      }
+    });
+    if (ul.dataset.dndReady) return;
+    ul.dataset.dndReady = '1';
+    makeSortable({
+      container: ul,
+      itemSelector: 'li',
+      onReorder: () => commitBulletOrder(name, ul),
+    });
+  });
+}
+
+function commitBulletOrder(name, ul) {
+  const entityId = ul.closest('[data-entity-id]')?.dataset.entityId;
+  const entity = entityId ? findEntity(name, entityId) : null;
+  if (!entity) return;
+  snapshotCollection(name);
+  const order = [...ul.querySelectorAll(':scope > li')]
+    .map(li => Number(li.dataset.field.split('.')[1]));
+  entity.fields.bullets = order.map(i => entity.fields.bullets[i]);
+  store.saveCollection(name, pageState[name].items);
+  rerender(name);
+}
+
 function commitField(node) {
   const name = collectionOf(node);
   const entityId = node.closest('[data-entity-id]')?.dataset.entityId;
@@ -165,13 +431,14 @@ function commitField(node) {
   const prev = isBullet
     ? entity.fields.bullets[Number(field.split('.')[1])]
     : entity.fields[field];
-  if (prev === node.innerHTML) return; // nothing changed
+  const html = cleanHTML(node); // admin chrome must never reach the store
+  if (prev === html) return; // nothing changed
 
   snapshotCollection(name);
   if (isBullet) {
-    entity.fields.bullets[Number(field.split('.')[1])] = node.innerHTML;
+    entity.fields.bullets[Number(field.split('.')[1])] = html;
   } else {
-    entity.fields[field] = node.innerHTML;
+    entity.fields[field] = html;
   }
   store.saveCollection(name, pageState[name].items);
   // period drives the computed tenure line — re-render to refresh it
@@ -179,29 +446,55 @@ function commitField(node) {
 }
 
 function commitText(node, prevHtml) {
-  if (prevHtml === node.innerHTML) return; // nothing changed
+  const html = cleanHTML(node);
+  if (prevHtml === html) return; // nothing changed
   pushUndo({ kind: 'text', textId: node.dataset.textId, prevHtml });
   const page = currentPage();
   const texts = store.loadTexts(page);
-  texts[node.dataset.textId] = node.innerHTML;
+  texts[node.dataset.textId] = html;
   store.saveTexts(page, texts);
 }
 
+/* Pasting rich text keeps only the plain characters — clipboard HTML
+   can smuggle in list markup that renders as a bullet nobody can edit. */
+function onPastePlain(ev) {
+  ev.preventDefault();
+  const text = (ev.clipboardData || window.clipboardData).getData('text/plain');
+  document.execCommand('insertText', false, text);
+}
+
 function startEditing(node) {
+  // handles are admin chrome — pull them out of the editable surface
+  node.querySelectorAll(':scope > .drag-handle').forEach(h => h.remove());
+  node.classList.remove('is-blank'); // full height while typing
   const prevHtml = node.innerHTML; // for undo of text edits
   node.contentEditable = 'true';
+  node.addEventListener('paste', onPastePlain);
   node.focus();
 
   const stop = () => {
     node.contentEditable = 'false';
     node.removeEventListener('blur', stop);
     node.removeEventListener('keydown', onKey);
+    node.removeEventListener('paste', onPastePlain);
     if (node.dataset.field !== undefined) {
       commitField(node);
       const ctx = bulletContext(node);
       if (ctx && !node.textContent.trim()) removeBullet(ctx);
+      else if (ctx) decorateBullets(ctx.name); // give the handle back
       if (node.dataset.field === 'outro' && !node.textContent.trim()) removeOutro(node);
-    } else if (node.dataset.textId !== undefined) commitText(node, prevHtml);
+    } else if (node.dataset.textId !== undefined) {
+      commitText(node, prevHtml);
+      if (isFooterLine(node)) {
+        const col = node.closest('[data-footer-col-id]');
+        if (!node.textContent.trim()) removeFooterLine(node);
+        else decorateFooterLine(node); // give the handle back
+        // a line just gained or lost content — clean up scratch slots
+        // left blank, then the "+" follows to the new last filled line
+        pruneBlankFooterLines(col);
+        placeFooterAddButton(col);
+      }
+    }
   };
   const onKey = ev => {
     if (ev.key === 'Escape') node.blur();
@@ -216,6 +509,11 @@ function startEditing(node) {
     } else if (ev.key === 'Enter' && !ev.shiftKey && node.dataset.field === 'outro') {
       ev.preventDefault();
       node.blur(); // Enter finishes the outro
+    } else if (ev.key === 'Enter' && isFooterLine(node)) {
+      ev.preventDefault();
+      const hasText = !!node.textContent.trim();
+      node.blur(); // commits (or removes, when emptied)
+      if (hasText) insertFooterLineAfter(node);
     }
   };
 
@@ -334,6 +632,7 @@ function rerender(name) {
   const state = pageState[name];
   renderCollection(state.container, state.items);
   decorateEntities(name);
+  decorateBullets(name);
 }
 
 function injectAddButtons() {
@@ -356,6 +655,7 @@ function switchVariant(id) {
     rerender(name);
   });
   applyTexts(); // persona owns the page copy too (hero deck, footer, titles)
+  initFooterLineSorting(); // decorate any lines the new persona brought in
   undoStack.length = 0; // undo entries belong to the previous variant
   renderVariantBar();
 }
@@ -559,6 +859,29 @@ async function publish() {
 
 /* ── Entry point ───────────────────────────────────────────── */
 
+/* Heal bullets that already swallowed list markup from an old paste:
+   each embedded <li> becomes its own bullet, wrappers are flattened. */
+function normalizeBullets(entity) {
+  const src = entity.fields?.bullets;
+  if (!src || !src.some(h => /<(li|ul|ol)[\s>]/i.test(h))) return false;
+  const out = [];
+  src.forEach(html => {
+    if (!/<(li|ul|ol)[\s>]/i.test(html)) { out.push(html); return; }
+    const box = document.createElement('div');
+    box.innerHTML = html;
+    const lis = [...box.querySelectorAll('li')];
+    lis.forEach(li => li.remove());
+    const lead = box.textContent.trim();
+    if (lead) out.push(lead);
+    lis.forEach(li => {
+      const text = li.textContent.trim();
+      if (text) out.push(text);
+    });
+  });
+  entity.fields.bullets = out.length ? out : [''];
+  return true;
+}
+
 export function initAdmin(state) {
   pageState = state;
   document.body.classList.add('admin-authed');
@@ -566,13 +889,20 @@ export function initAdmin(state) {
   document.addEventListener('click', onClickGuard, true);
   document.addEventListener('keydown', onUndoKey);
   Object.keys(pageState).forEach(name => {
+    const healed = pageState[name].items.filter(normalizeBullets);
+    if (healed.length) {
+      store.saveCollection(name, pageState[name].items);
+      renderCollection(pageState[name].container, pageState[name].items);
+    }
     decorateEntities(name);
+    decorateBullets(name);
     makeSortable({
       container: pageState[name].container,
       itemSelector: '[data-entity-id]',
       onReorder: () => commitEntityOrder(name),
     });
   });
+  initFooterLineSorting();
   initBlockSorting();
   initFooterColSorting();
   injectAddButtons();

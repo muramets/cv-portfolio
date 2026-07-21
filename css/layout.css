@@ -381,6 +381,10 @@
 
 .footer-col a:hover { opacity: 1; color: var(--jelly-mint); }
 
+/* Freed footer-line slots store '' — visitors never see the gap
+   (admin keeps them visible as an editing affordance) */
+body:not(.is-admin) .footer-col span:empty { display: none; }
+
 /* Pill tag inside the footer — keep the design-system spec:
    mint fill, black text, full opacity (footer link styles must not bleed in) */
 .footer-col a.btn-tag {
