@@ -1,9 +1,9 @@
 // Bootstrap: remote content → auth → texts → collections →
 // (admin UI if authorized).
 
-import { initAuth, isAdmin, login, logout } from './auth.js?v=31';
-import { initStore } from './store.js?v=31';
-import { renderPage, applyTexts, applyBlockOrder, pruneEmptyNav } from './render.js?v=31';
+import { initAuth, isAdmin, login, logout } from './auth.js?v=32';
+import { initStore } from './store.js?v=32';
+import { renderPage, applyTexts, applyBlockOrder, pruneEmptyNav } from './render.js?v=32';
 
 // Cold load has no inbound view transition (nothing to morph from) —
 // give it a one-time entrance fade instead. Navigations between pages
@@ -28,7 +28,7 @@ applyBlockOrder();
 const state = renderPage();
 
 if (isAdmin()) {
-  const { initAdmin } = await import('./admin.js?v=31');
+  const { initAdmin } = await import('./admin.js?v=32');
   initAdmin(state);
 } else {
   pruneEmptyNav(); // hide links to pages that have nothing on them yet
@@ -82,25 +82,51 @@ function initTimelineCollapse() {
     });
   }
 
-  function backToSection() {
-    if (list.getBoundingClientRect().top < 0) {
-      list.closest('.section')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
-    }
-  }
-
   function collapse() {
     const from = list.offsetHeight;
     list.classList.add('is-collapsed');
-    if (reduced) { backToSection(); return; }
     const to = list.offsetHeight;
+    if (reduced) return;
+
     // keep the cards visible while the shrinking container clips them —
     // display:none lands only after the motion is over
     list.classList.remove('is-collapsed');
     list.classList.add('is-collapsing');
-    runHeight(from, to, () => {
+
+    const finish = () => {
       list.classList.remove('is-collapsing');
       list.classList.add('is-collapsed');
-      backToSection(); // scroll only after the height settles — no tug-of-war
+    };
+
+    if (list.getBoundingClientRect().top >= 0) {
+      // section top is on screen: fold up toward it, nothing else moves
+      runHeight(from, to, finish);
+      return;
+    }
+
+    // Scrolled deep (the user is near the button): pin the clicked button
+    // to its viewport position and fold the list in sync with the scroll,
+    // so neither the button nor the content below it ever jumps.
+    list.style.overflow = 'hidden';
+    list.style.height = from + 'px';
+    document.documentElement.style.overflowAnchor = 'none'; // we do the anchoring
+    const anchorY = btn.getBoundingClientRect().top;
+    const started = performance.now();
+    const DURATION = 500;
+    const easeInOut = t => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+
+    requestAnimationFrame(function frame(now) {
+      const t = Math.min(1, (now - started) / DURATION);
+      list.style.height = from + (to - from) * easeInOut(t) + 'px';
+      const drift = btn.getBoundingClientRect().top - anchorY;
+      if (drift) window.scrollBy(0, drift);
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        list.style.height = list.style.overflow = '';
+        document.documentElement.style.overflowAnchor = '';
+        finish();
+      }
     });
   }
 
