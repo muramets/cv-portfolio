@@ -1,9 +1,9 @@
 // Rendering: data → DOM. Pure output, no admin chrome — admin.js decorates
 // rendered entities separately when admin mode is on.
 
-import { ENTITY_TYPES } from './entities.js?v=23';
-import { store, currentPage } from './store.js?v=23';
-import { SEED } from './content.js?v=23';
+import { ENTITY_TYPES } from './entities.js?v=24';
+import { store, currentPage } from './store.js?v=24';
+import { SEED } from './content.js?v=24';
 
 /** Resolve current items for a collection: local override or seed. */
 export function getItems(name) {
@@ -39,6 +39,25 @@ export function renderPage() {
     }
   });
   return state;
+}
+
+/** Public visitors don't see nav links to pages that have no content
+    yet; the admin keeps the full nav to be able to fill them.
+    Maps nav href -> the collection that feeds that page. */
+const NAV_COLLECTIONS = {
+  'skillsets': 'skillsets',
+  'creator-tools': 'tools',
+  'collabs': 'collabs',
+};
+
+export function pruneEmptyNav() {
+  document.querySelectorAll('.vnav a[href]').forEach(a => {
+    const name = NAV_COLLECTIONS[a.getAttribute('href')];
+    if (name && getItems(name).length === 0) {
+      const li = a.closest('li');
+      if (li) li.style.display = 'none';
+    }
+  });
 }
 
 /** Apply saved singleton texts to [data-text-id] elements (scoped per
