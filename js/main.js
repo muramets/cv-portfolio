@@ -1,9 +1,9 @@
 // Bootstrap: remote content → auth → texts → collections →
 // (admin UI if authorized).
 
-import { initAuth, isAdmin, login, logout } from './auth.js?v=33';
-import { initStore } from './store.js?v=33';
-import { renderPage, applyTexts, applyBlockOrder, pruneEmptyNav } from './render.js?v=33';
+import { initAuth, isAdmin, login, logout } from './auth.js?v=34';
+import { initStore } from './store.js?v=34';
+import { renderPage, applyTexts, applyBlockOrder, pruneEmptyNav } from './render.js?v=34';
 
 // Cold load has no inbound view transition (nothing to morph from) —
 // give it a one-time entrance fade instead. Navigations between pages
@@ -28,7 +28,7 @@ applyBlockOrder();
 const state = renderPage();
 
 if (isAdmin()) {
-  const { initAdmin } = await import('./admin.js?v=33');
+  const { initAdmin } = await import('./admin.js?v=34');
   initAdmin(state);
 } else {
   pruneEmptyNav(); // hide links to pages that have nothing on them yet
@@ -83,10 +83,21 @@ function initTimelineCollapse() {
   }
 
   function collapse() {
-    // fold instantly (layout settles at once), then glide to Get in Touch
+    const from = list.offsetHeight;
     list.classList.add('is-collapsed');
-    document.getElementById('contact')
+    const to = list.offsetHeight;
+    const glide = () => document.getElementById('contact')
       ?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    if (reduced) { glide(); return; }
+    // fold smoothly — cards stay visible and get clipped by the shrinking
+    // container; once the height settles, glide to Get in Touch
+    list.classList.remove('is-collapsed');
+    list.classList.add('is-collapsing');
+    runHeight(from, to, () => {
+      list.classList.remove('is-collapsing');
+      list.classList.add('is-collapsed');
+      glide();
+    });
   }
 
   btn.addEventListener('click', () => {
