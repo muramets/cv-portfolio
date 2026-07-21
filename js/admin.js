@@ -1,11 +1,11 @@
 // Admin mode: inline editing, add/delete entities, toolbar.
 // Initialized ONLY when auth.isAdmin() — public visitors never load this UI.
 
-import { ENTITY_TYPES } from './entities.js?v=22';
-import { store, currentPage } from './store.js?v=22';
-import { renderCollection, getItems, applyTexts } from './render.js?v=22';
-import { logout } from './auth.js?v=22';
-import { makeSortable, createHandle } from './dnd.js?v=22';
+import { ENTITY_TYPES } from './entities.js?v=23';
+import { store, currentPage } from './store.js?v=23';
+import { renderCollection, getItems, applyTexts } from './render.js?v=23';
+import { logout } from './auth.js?v=23';
+import { makeSortable, createHandle } from './dnd.js?v=23';
 
 let pageState = null; // { name: { container, items } }
 
@@ -78,6 +78,37 @@ function collectionOf(node) {
 
 /* ── Field editing ─────────────────────────────────────────── */
 
+/* Bullets are a list inside one entity: Enter splits in a new bullet,
+   an emptied bullet is removed on blur (the last one always stays). */
+function bulletContext(node) {
+  const name = collectionOf(node);
+  const entityId = node.closest('[data-entity-id]')?.dataset.entityId;
+  const field = node.dataset.field;
+  if (!name || !entityId || !field?.startsWith('bullets.')) return null;
+  return { name, entityId, index: Number(field.split('.')[1]) };
+}
+
+function insertBulletAfter({ name, entityId, index }) {
+  const entity = findEntity(name, entityId);
+  if (!entity) return;
+  snapshotCollection(name);
+  entity.fields.bullets.splice(index + 1, 0, '');
+  store.saveCollection(name, pageState[name].items);
+  rerender(name);
+  const next = document.querySelector(
+    `[data-entity-id="${CSS.escape(entityId)}"] [data-field="bullets.${index + 1}"]`);
+  if (next) startEditing(next);
+}
+
+function removeBullet({ name, entityId, index }) {
+  const entity = findEntity(name, entityId);
+  if (!entity || entity.fields.bullets.length <= 1) return;
+  snapshotCollection(name);
+  entity.fields.bullets.splice(index, 1);
+  store.saveCollection(name, pageState[name].items);
+  rerender(name);
+}
+
 function commitField(node) {
   const name = collectionOf(node);
   const entityId = node.closest('[data-entity-id]')?.dataset.entityId;
@@ -122,10 +153,22 @@ function startEditing(node) {
     node.contentEditable = 'false';
     node.removeEventListener('blur', stop);
     node.removeEventListener('keydown', onKey);
-    if (node.dataset.field !== undefined) commitField(node);
-    else if (node.dataset.textId !== undefined) commitText(node, prevHtml);
+    if (node.dataset.field !== undefined) {
+      commitField(node);
+      const ctx = bulletContext(node);
+      if (ctx && !node.textContent.trim()) removeBullet(ctx);
+    } else if (node.dataset.textId !== undefined) commitText(node, prevHtml);
   };
-  const onKey = ev => { if (ev.key === 'Escape') node.blur(); };
+  const onKey = ev => {
+    if (ev.key === 'Escape') node.blur();
+    if (ev.key === 'Enter' && node.dataset.field?.startsWith('bullets.')) {
+      ev.preventDefault();
+      const ctx = bulletContext(node);
+      const hasText = !!node.textContent.trim();
+      node.blur(); // commits the current bullet (or removes it when emptied)
+      if (ctx && hasText) insertBulletAfter(ctx);
+    }
+  };
 
   node.addEventListener('blur', stop);
   node.addEventListener('keydown', onKey);
