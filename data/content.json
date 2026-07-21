@@ -167,9 +167,39 @@
             "period": "02/2019 — 03/2020",
             "deck": "<div>My first video job — I came in green, fresh from doing legal support for real-estate deals, and spent a double-length probation being exactly average: the camera just isn't my instrument to play. But I needed to stay in the game, so I decided to close the gap with editing quality and speed.</div>",
             "bullets": [
-              "<div>Learned Premiere Pro from scratch, every hotkey written out on two A4 sheets — then ran a master class where anyone could race me on the same source files, on a timer. Nobody was faster.</div>",
+              "<div>Learned Premiere Pro from scratch, every hotkey written out on two A4 sheets I still sentimentally keep — then ran a master class where anyone could race me on the same source files, on a timer. Nobody was faster.</div>",
               "Recorded the company's internal video course on editing shortcuts — voice-over on screencast — that colleagues kept asking about long after.",
               "<div>Wrote, shot, and edit videos for the social media projects, learning every part of the craft on the job — some reached millions of views, some hundreds of millions.</div>"
+            ]
+          }
+        },
+        {
+          "id": "role-mruv2vgu-1",
+          "type": "role",
+          "fields": {
+            "title": "Master of Laws",
+            "company": "Vyatka State University<div>Kirov, Russia</div>",
+            "period": "09/2017 — 09/2019",
+            "deck": "Honest take: this degree had exactly one job — keeping me out of the army. And if I was buying myself two student years anyway, the braver me would have spent them on audio engineering, the old dream. I just didn't believe in myself enough to even see that door at that time. Still:",
+            "bullets": [
+              "Practice showed me that law isn't my passion — in a music setting it kind of is, but as a supporting role, not the lead (a note from today).",
+              "Played the cards I had by a simple rule: better odds starting the search for myself in the creative field than in any legal job I was ready to see back then.",
+              "Graduated with honors"
+            ]
+          }
+        },
+        {
+          "id": "role-mruuzju4-0",
+          "type": "role",
+          "fields": {
+            "title": "Bachelor of Laws",
+            "company": "Kazan State University<div>Kazan, Russia</div>",
+            "period": "07/2013 — 07/2017",
+            "deck": "Landed in the right place at the right time, half by accident. Legal theory showed my curiosity what it had been looking for — how systems are built: structures, hierarchies, frameworks. It's always been tough for me to comprehend physics; the laws people wire into the essence of things turned out to be my way into systems thinking.",
+            "bullets": [
+              "One seminar stuck with me: the Pussy Riot case was unfolding, and we spent the whole class playing the state — building the legal case for the prosecution while the professor took it apart point by point, showing us why the case was political. I didn't see this class this way back then, but do now.",
+              "<br>",
+              "<ul class=\"timeline-bullets\" style=\"font-size: 16px;\"><li data-field=\"bullets.1\" style=\"font-family: &quot;Space Grotesk&quot;, Helvetica, Arial, sans-serif; color: rgb(0, 0, 0); outline: rgba(82, 0, 255, 0.35) dashed 1px; cursor: text;\">Graduated with honors</li></ul>"
             ]
           }
         }
