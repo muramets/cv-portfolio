@@ -344,6 +344,19 @@
 }
 .timeline-expand:hover { color: var(--verge-ultraviolet); }
 
+/* Cards arriving on "Earlier timeline" — soft rise, staggered via JS */
+.timeline-item.is-revealing {
+  animation: timeline-reveal 480ms ease backwards;
+}
+
+@keyframes timeline-reveal {
+  from { opacity: 0; transform: translateY(14px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline-item.is-revealing { animation: none; }
+}
+
 /* Closing line after the bullets — same voice, no marker */
 .timeline-outro {
   font-family: var(--font-sans);

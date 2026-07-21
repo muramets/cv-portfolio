@@ -1,9 +1,9 @@
 // Bootstrap: remote content → auth → texts → collections →
 // (admin UI if authorized).
 
-import { initAuth, isAdmin, login, logout } from './auth.js?v=29';
-import { initStore } from './store.js?v=29';
-import { renderPage, applyTexts, applyBlockOrder, pruneEmptyNav } from './render.js?v=29';
+import { initAuth, isAdmin, login, logout } from './auth.js?v=30';
+import { initStore } from './store.js?v=30';
+import { renderPage, applyTexts, applyBlockOrder, pruneEmptyNav } from './render.js?v=30';
 
 // Cold load has no inbound view transition (nothing to morph from) —
 // give it a one-time entrance fade instead. Navigations between pages
@@ -28,7 +28,7 @@ applyBlockOrder();
 const state = renderPage();
 
 if (isAdmin()) {
-  const { initAdmin } = await import('./admin.js?v=29');
+  const { initAdmin } = await import('./admin.js?v=30');
   initAdmin(state);
 } else {
   pruneEmptyNav(); // hide links to pages that have nothing on them yet
@@ -36,21 +36,60 @@ if (isAdmin()) {
   initTimelineCollapse();
 }
 
-/* Professional Journey: visitors get the three most recent roles;
-   the earlier ones wait behind a fade and one button press. */
+/* Professional Journey: visitors get the three most recent roles; the
+   earlier ones wait behind a fade and one button press. Expanding
+   animates the list height and staggers the incoming cards; the same
+   button then collapses back to recent-only. */
 function initTimelineCollapse() {
   const list = document.querySelector('.timeline-list');
   if (!list || list.querySelectorAll('[data-entity-id]').length <= 3) return;
+
   list.classList.add('is-collapsed');
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'timeline-expand';
   btn.textContent = 'Earlier timeline ↓';
-  btn.addEventListener('click', () => {
-    list.classList.remove('is-collapsed');
-    btn.remove();
-  }, { once: true });
   list.after(btn);
+
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function animateHeight(mutate) {
+    const from = list.offsetHeight;
+    mutate();
+    if (reduced) return;
+    const to = list.offsetHeight;
+    list.style.height = from + 'px';
+    list.style.overflow = 'hidden';
+    void list.offsetHeight; // flush, so the next height change transitions
+    list.style.transition = 'height 500ms ease';
+    list.style.height = to + 'px';
+    list.addEventListener('transitionend', function clear(e) {
+      if (e.propertyName !== 'height') return;
+      list.style.height = list.style.overflow = list.style.transition = '';
+      list.removeEventListener('transitionend', clear);
+    });
+  }
+
+  btn.addEventListener('click', () => {
+    const expanding = list.classList.contains('is-collapsed');
+    animateHeight(() => list.classList.toggle('is-collapsed'));
+
+    if (expanding && !reduced) {
+      list.querySelectorAll('.timeline-item:nth-child(n+4)').forEach((item, i) => {
+        item.classList.add('is-revealing');
+        item.style.animationDelay = i * 70 + 'ms';
+        item.addEventListener('animationend', () => {
+          item.classList.remove('is-revealing');
+          item.style.animationDelay = '';
+        }, { once: true });
+      });
+    }
+    if (!expanding && list.getBoundingClientRect().top < 0) {
+      // collapsed while scrolled deep — bring the section back
+      list.closest('.section')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    }
+    btn.textContent = expanding ? 'Recent only ↑' : 'Earlier timeline ↓';
+  });
 }
 
 /* Past/Present deck rotation — public only (admin sees both panes
