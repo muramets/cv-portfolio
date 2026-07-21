@@ -233,7 +233,8 @@
   color: var(--absolute-black);
 }
 .timeline-item:hover .timeline-body .story-deck,
-.timeline-item:hover .timeline-body .timeline-bullets li {
+.timeline-item:hover .timeline-body .timeline-bullets li,
+.timeline-item:hover .timeline-body .timeline-outro {
   color: var(--absolute-black);
   opacity: 1;
 }
@@ -309,6 +310,15 @@
   top: 0;
   color: var(--verge-ultraviolet);
   font-size: 12px;
+}
+
+/* Closing line after the bullets — same voice, no marker */
+.timeline-outro {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--secondary-text);
 }
 
 /* ─────────────────────────────────────────────────────────

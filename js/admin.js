@@ -1,11 +1,11 @@
 // Admin mode: inline editing, add/delete entities, toolbar.
 // Initialized ONLY when auth.isAdmin() — public visitors never load this UI.
 
-import { ENTITY_TYPES } from './entities.js?v=24';
-import { store, currentPage } from './store.js?v=24';
-import { renderCollection, getItems, applyTexts } from './render.js?v=24';
-import { logout } from './auth.js?v=24';
-import { makeSortable, createHandle } from './dnd.js?v=24';
+import { ENTITY_TYPES } from './entities.js?v=25';
+import { store, currentPage } from './store.js?v=25';
+import { renderCollection, getItems, applyTexts } from './render.js?v=25';
+import { logout } from './auth.js?v=25';
+import { makeSortable, createHandle } from './dnd.js?v=25';
 
 let pageState = null; // { name: { container, items } }
 
@@ -109,6 +109,33 @@ function removeBullet({ name, entityId, index }) {
   rerender(name);
 }
 
+/* Outro — an optional closing line under the bullet list (no marker).
+   Shift+Enter from a bullet creates it; emptying it removes it. */
+function startOutro({ name, entityId }) {
+  const entity = findEntity(name, entityId);
+  if (!entity) return;
+  if (entity.fields.outro == null) {
+    snapshotCollection(name);
+    entity.fields.outro = '';
+    store.saveCollection(name, pageState[name].items);
+    rerender(name);
+  }
+  const node = document.querySelector(
+    `[data-entity-id="${CSS.escape(entityId)}"] [data-field="outro"]`);
+  if (node) startEditing(node);
+}
+
+function removeOutro(node) {
+  const name = collectionOf(node);
+  const entityId = node.closest('[data-entity-id]')?.dataset.entityId;
+  const entity = name && entityId ? findEntity(name, entityId) : null;
+  if (!entity || entity.fields.outro == null) return;
+  snapshotCollection(name);
+  delete entity.fields.outro;
+  store.saveCollection(name, pageState[name].items);
+  rerender(name);
+}
+
 function commitField(node) {
   const name = collectionOf(node);
   const entityId = node.closest('[data-entity-id]')?.dataset.entityId;
@@ -157,6 +184,7 @@ function startEditing(node) {
       commitField(node);
       const ctx = bulletContext(node);
       if (ctx && !node.textContent.trim()) removeBullet(ctx);
+      if (node.dataset.field === 'outro' && !node.textContent.trim()) removeOutro(node);
     } else if (node.dataset.textId !== undefined) commitText(node, prevHtml);
   };
   const onKey = ev => {
@@ -166,7 +194,12 @@ function startEditing(node) {
       const ctx = bulletContext(node);
       const hasText = !!node.textContent.trim();
       node.blur(); // commits the current bullet (or removes it when emptied)
-      if (ctx && hasText) insertBulletAfter(ctx);
+      if (!ctx) return;
+      if (ev.shiftKey) startOutro(ctx);       // Shift+Enter → closing line, no marker
+      else if (hasText) insertBulletAfter(ctx);
+    } else if (ev.key === 'Enter' && !ev.shiftKey && node.dataset.field === 'outro') {
+      ev.preventDefault();
+      node.blur(); // Enter finishes the outro
     }
   };
 

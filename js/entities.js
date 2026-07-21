@@ -102,6 +102,14 @@ export const ENTITY_TYPES = {
       });
       body.append(deck, bullets);
 
+      // optional closing line under the bullets, no list marker
+      // (admin: Shift+Enter from a bullet creates/edits it)
+      if (f.outro != null) {
+        const outro = el('p', 'timeline-outro', f.outro);
+        outro.dataset.field = 'outro';
+        body.append(outro);
+      }
+
       item.append(meta, body);
       return item;
     },

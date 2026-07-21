@@ -1,9 +1,9 @@
 // Rendering: data → DOM. Pure output, no admin chrome — admin.js decorates
 // rendered entities separately when admin mode is on.
 
-import { ENTITY_TYPES } from './entities.js?v=24';
-import { store, currentPage } from './store.js?v=24';
-import { SEED } from './content.js?v=24';
+import { ENTITY_TYPES } from './entities.js?v=25';
+import { store, currentPage } from './store.js?v=25';
+import { SEED } from './content.js?v=25';
 
 /** Resolve current items for a collection: local override or seed. */
 export function getItems(name) {
@@ -53,10 +53,9 @@ const NAV_COLLECTIONS = {
 export function pruneEmptyNav() {
   document.querySelectorAll('.vnav a[href]').forEach(a => {
     const name = NAV_COLLECTIONS[a.getAttribute('href')];
-    if (name && getItems(name).length === 0) {
-      const li = a.closest('li');
-      if (li) li.style.display = 'none';
-    }
+    // remove (not hide): the "/" separator is :last-child-driven CSS,
+    // so the remaining links must be real last children
+    if (name && getItems(name).length === 0) a.closest('li')?.remove();
   });
 }
 

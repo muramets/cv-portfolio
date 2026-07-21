@@ -232,5 +232,6 @@ body {
 .timeline-bullets { gap: 1pt; }
 .timeline-bullets li { font-size: 8.5pt; line-height: 1.35; color: #333; padding-left: 9pt; }
 .timeline-bullets li::before { color: #5200ff; font-size: 8pt; }
+.timeline-outro { font-size: 8.5pt; line-height: 1.35; color: #333; break-inside: avoid; }
 
 /* Footer is hidden in print — contact details belong to the page body */
