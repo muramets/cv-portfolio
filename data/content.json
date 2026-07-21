@@ -142,6 +142,36 @@
               "Launched a video project as an independent business unit across several platforms."
             ]
           }
+        },
+        {
+          "id": "role-mrus91vp-1",
+          "type": "role",
+          "fields": {
+            "title": "Technical Lead",
+            "company": "TheSoul Publishing<br>Kazan, Rusiia",
+            "period": "04/2020 — 07/2021",
+            "deck": "The filming teams' quality-of-life department — and the producer's right hand on day-to-day operations.",
+            "bullets": [
+              "Wrote production guides and ran master classes for the filming crews — so the same lesson never had to be learned twice.",
+              "Researched the YouTube video ecosystem and our place in it, then turned the findings into a content loop: what the data liked, the next batch of videos got.",
+              "Oversaw the production loop end to end — shoot, edit, voice-over, translation, compilation — coaching each role along the way through revisions."
+            ]
+          }
+        },
+        {
+          "id": "role-mrusk533-2",
+          "type": "role",
+          "fields": {
+            "title": "Video Designer",
+            "company": "TheSoul Publishing<br>Kazan, Russia",
+            "period": "02/2019 — 03/2020",
+            "deck": "<div>My first video job — I came in green, fresh from doing legal support for real-estate deals, and spent a double-length probation being exactly average: the camera just isn't my instrument to play. But I needed to stay in the game, so I decided to close the gap with editing quality and speed.</div>",
+            "bullets": [
+              "<div>Learned Premiere Pro from scratch, every hotkey written out on two A4 sheets — then ran a master class where anyone could race me on the same source files, on a timer. Nobody was faster.</div>",
+              "Recorded the company's internal video course on editing shortcuts — voice-over on screencast — that colleagues kept asking about long after.",
+              "<div>Wrote, shot, and edit videos for the social media projects, learning every part of the craft on the job — some reached millions of views, some hundreds of millions.</div>"
+            ]
+          }
         }
       ]
     }
