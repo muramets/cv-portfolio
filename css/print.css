@@ -223,9 +223,10 @@ body {
   border-top: 0.5pt solid #d4d4d4;
 }
 
-/* PDF always prints the full timeline */
-.timeline-list.is-collapsed .timeline-item:nth-child(n+4) { display: grid; }
-.timeline-list.is-collapsed::after { display: none; }
+/* PDF always prints the full timeline — cards are hidden via inline
+   display on screen, so !important is required to win here */
+.timeline-list .timeline-item { display: grid !important; }
+.timeline-list.has-fade::after { display: none; }
 .timeline-expand { display: none; }
 
 .timeline-bullets li { break-inside: avoid; }
