@@ -414,6 +414,7 @@
   background: var(--canvas-inverted);
   color: var(--inverted-text);
   padding: 56px var(--gutter);
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   margin-top: auto; /* sticky footer: pushes to the bottom on short pages */
 }
 
