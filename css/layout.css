@@ -466,8 +466,230 @@ body:not(.is-admin) .footer-col span:empty { display: none; }
     left: 6px;
   }
   .masthead-meta-row {
-    flex-direction: column;
-    gap: 6px;
-    align-items: flex-start;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 48px;
+    min-height: 40px;
   }
+  .masthead-kicker {
+    font-size: clamp(9px, 2.6vw, 11px);
+    letter-spacing: 1.2px;
+    line-height: 1.25;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+   MOBILE NAV — burger + ultraviolet drawer, floating section bar
+   (Verge mobile pattern). Desktop is untouched: everything below
+   lives behind the phone breakpoint.
+───────────────────────────────────────────────────────── */
+.nav-burger, .nav-drawer, .nav-overlay, .section-bar { display: none; }
+
+html.drawer-open { overflow: hidden; }
+
+@media (max-width: 650px) {
+  .site-header-inner {
+    position: relative;
+    padding-top: 16px;
+  }
+  .site-header-inner > .vnav {
+    position: absolute;
+    top: 12px;
+    right: 0;
+    z-index: 10;
+  }
+  .vnav ul { display: none; }
+
+  .nav-burger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    margin-left: auto;
+    width: 40px;
+    height: 40px;
+    padding: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .nav-burger span {
+    display: block;
+    height: 2px;
+    background: var(--primary-text);
+    border-radius: 2px;
+  }
+
+  .nav-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 300ms ease;
+    z-index: 1090;
+  }
+  .nav-overlay.is-open { opacity: 1; pointer-events: auto; }
+
+  .nav-drawer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(78vw, 340px);
+    background: var(--verge-ultraviolet);
+    color: var(--hazard-white);
+    padding: 20px 24px 28px;
+    transform: translateX(103%);
+    transition: transform 340ms cubic-bezier(0.32, 0.72, 0.33, 1);
+    z-index: 1100;
+    overflow: hidden;
+  }
+  .nav-drawer.is-open { transform: translateX(0); }
+
+  .nav-drawer-close {
+    align-self: flex-end;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--hazard-white);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 8px 0;
+  }
+
+  .nav-drawer-links {
+    display: flex;
+    flex-direction: column;
+    margin-top: 24px;
+    position: relative;
+    z-index: 1;
+  }
+  .nav-drawer .drawer-link {
+    font-family: var(--font-sans);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--hazard-white);
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+    opacity: 0;
+    transform: translateX(16px);
+    transition: opacity 300ms ease, transform 300ms ease;
+  }
+  .nav-drawer.is-open .drawer-link { opacity: 1; transform: none; }
+  .nav-drawer .drawer-link.is-active { color: var(--jelly-mint); }
+
+  .drawer-cta {
+    position: relative;
+    z-index: 1;
+    margin-top: auto;
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--absolute-black);
+    background: var(--jelly-mint);
+    padding: 12px 24px;
+    border-radius: var(--radius-pill);
+  }
+
+  /* Giant vertical wordmark ghosting the panel — the Verge signature */
+  .drawer-watermark {
+    position: absolute;
+    right: -6px;
+    bottom: -10px;
+    writing-mode: vertical-rl;
+    font-family: var(--font-display);
+    font-size: 110px;
+    line-height: 0.9;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.08);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* Section bar: fixed frosted segmented toggle pill at top of screen on mobile.
+     Appears smoothly when entering section content past the header. */
+  .section-bar {
+    display: flex;
+    gap: 4px;
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translate(-50%, -24px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 300ms ease, transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 900;
+    width: fit-content;
+    max-width: calc(100vw - 110px);
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(235, 235, 235, 0.65);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    scrollbar-width: none;
+  }
+  .section-bar.is-visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    pointer-events: auto;
+  }
+  .section-bar::-webkit-scrollbar { display: none; }
+
+  /* Status label relocated between the wordmark and the avatar (JS) */
+  .masthead-hero-row .masthead-date {
+    align-self: center;
+    text-align: center;
+    flex-shrink: 1;
+    margin: 0 8px;
+  }
+
+  .section-bar-tab {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--secondary-text);
+    padding: 9px 18px;
+    border-radius: 999px;
+    white-space: nowrap;
+    transition: color 200ms ease, background 200ms ease;
+  }
+  .section-bar-tab:hover:not(.is-active) {
+    color: var(--primary-text);
+    background: rgba(0, 0, 0, 0.04);
+  }
+  .section-bar-tab.is-active {
+    background: var(--verge-ultraviolet);
+    color: var(--hazard-white);
+    border-radius: 999px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-drawer,
+  .nav-overlay,
+  .nav-drawer .drawer-link { transition: none; }
 }

@@ -255,3 +255,6 @@ body {
 .timeline-outro { font-size: 8.5pt; line-height: 1.35; color: #333; break-inside: avoid; }
 
 /* Footer is hidden in print — contact details belong to the page body */
+
+/* Mobile nav chrome never prints */
+.nav-burger, .nav-drawer, .nav-overlay, .section-bar { display: none; }

@@ -1,9 +1,9 @@
 // Bootstrap: remote content → auth → texts → collections →
 // (admin UI if authorized).
 
-import { initAuth, isAdmin, login, logout } from './auth.js?v=40';
-import { initStore } from './store.js?v=40';
-import { renderPage, applyTexts, applyBlockOrder, applyFooterColOrder, pruneEmptyNav } from './render.js?v=40';
+import { initAuth, isAdmin, login, logout } from './auth.js?v=42';
+import { initStore } from './store.js?v=42';
+import { renderPage, applyTexts, applyBlockOrder, applyFooterColOrder, pruneEmptyNav } from './render.js?v=42';
 
 // Cold load has no inbound view transition (nothing to morph from) —
 // give it a one-time entrance fade instead. Navigations between pages
@@ -29,7 +29,7 @@ applyFooterColOrder();
 const state = renderPage();
 
 if (isAdmin()) {
-  const { initAdmin } = await import('./admin.js?v=40');
+  const { initAdmin } = await import('./admin.js?v=42');
   initAdmin(state);
 } else {
   pruneEmptyNav(); // hide links to pages that have nothing on them yet
@@ -37,6 +37,145 @@ if (isAdmin()) {
   initTimelineCollapse();
 }
 initContactForm();
+initMobileNav();
+initSectionBar();
+placeStatusForMobile();
+
+/* Mobile: the status label (COOKING… / Available for Collab) moves from
+   the meta row into the hero row — between the wordmark and the avatar.
+   Desktop keeps the original meta-row position. The node MOVES (never
+   duplicates), so admin editing and applyTexts keep a single source. */
+function placeStatusForMobile() {
+  const status = document.querySelector('.masthead-date');
+  const metaRow = document.querySelector('.masthead-meta-row');
+  const heroRow = document.querySelector('.masthead-hero-row');
+  if (!status || !metaRow || !heroRow) return;
+  const avatar = heroRow.querySelector('.masthead-avatar-wrap');
+  const mq = matchMedia('(max-width: 650px)');
+  const apply = () => {
+    if (mq.matches) heroRow.insertBefore(status, avatar ?? null);
+    else metaRow.append(status);
+  };
+  mq.addEventListener('change', apply);
+  apply();
+}
+
+/* ── Mobile: burger + slide-in drawer (all pages) ─────────────
+   The drawer is built from the live .vnav list — after pruneEmptyNav,
+   so visitors never see links to empty pages. Verge-style: ultraviolet
+   panel from the right, dimmed overlay, staggered links, watermark. */
+function initMobileNav() {
+  const vnav = document.querySelector('.vnav');
+  const list = vnav?.querySelector('ul');
+  if (!vnav || !list) return;
+
+  const burger = document.createElement('button');
+  burger.type = 'button';
+  burger.className = 'nav-burger';
+  burger.setAttribute('aria-label', 'Open menu');
+  burger.innerHTML = '<span></span><span></span><span></span>';
+  vnav.append(burger);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'nav-overlay';
+
+  const drawer = document.createElement('aside');
+  drawer.className = 'nav-drawer';
+
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'nav-drawer-close';
+  close.innerHTML = 'close <span aria-hidden="true">✕</span>';
+
+  const links = document.createElement('nav');
+  links.className = 'nav-drawer-links';
+  list.querySelectorAll('a').forEach((a, i) => {
+    const link = a.cloneNode(true);
+    link.classList.add('drawer-link');
+    link.style.transitionDelay = 60 + i * 50 + 'ms'; // staggered entrance
+    links.append(link);
+  });
+
+  const cta = document.createElement('a');
+  cta.className = 'drawer-cta';
+  cta.href = 'mailto:muramets007@gmail.com';
+  cta.textContent = 'Email Me';
+
+  const mark = document.createElement('div');
+  mark.className = 'drawer-watermark';
+  mark.setAttribute('aria-hidden', 'true');
+  mark.textContent = 'ILIA BLINOV';
+
+  drawer.append(close, links, cta, mark);
+  document.body.append(overlay, drawer);
+
+  const open = () => {
+    document.documentElement.classList.add('drawer-open');
+    overlay.classList.add('is-open');
+    drawer.classList.add('is-open');
+  };
+  const shut = () => {
+    document.documentElement.classList.remove('drawer-open');
+    overlay.classList.remove('is-open');
+    drawer.classList.remove('is-open');
+  };
+  burger.addEventListener('click', open);
+  close.addEventListener('click', shut);
+  overlay.addEventListener('click', shut);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') shut(); });
+}
+
+/* ── Mobile: floating section bar (main page only) ────────────
+   Verge-style frosted pill pinned to the viewport top. Built from the
+   page's [data-block-id] sections; labels come from the ribbon text
+   ("Section 01 / Impact" → "Impact"). Scrollspy highlights the section
+   in view; tapping glides to it. Pages with one section get no bar. */
+function initSectionBar() {
+  const sections = [...document.querySelectorAll('[data-block-id]')];
+  if (sections.length < 2) return;
+
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const bar = document.createElement('nav');
+  bar.className = 'section-bar';
+  bar.setAttribute('aria-label', 'Page sections');
+
+  const tabs = new Map();
+  sections.forEach(section => {
+    const label = section.querySelector('.section-ribbon')
+      ?.textContent.split('/').pop().trim() || section.dataset.blockId;
+    const tab = document.createElement('button');
+    tab.type = 'button';
+    tab.className = 'section-bar-tab';
+    tab.textContent = label;
+    tab.addEventListener('click', () =>
+      section.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' }));
+    tabs.set(section, tab);
+    bar.append(tab);
+  });
+
+  document.body.append(bar);
+
+  // Show floating bar reliably whenever scroll passes the site header into section content
+  const header = document.querySelector('.site-header');
+  const checkVisibility = () => {
+    const headerThreshold = (header?.offsetHeight || 180) - 50;
+    const isPastHeader = window.scrollY > headerThreshold;
+    bar.classList.toggle('is-visible', isPastHeader);
+  };
+
+  window.addEventListener('scroll', checkVisibility, { passive: true });
+  checkVisibility();
+
+  const spy = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      tabs.forEach(tab => tab.classList.remove('is-active'));
+      tabs.get(entry.target)?.classList.add('is-active');
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  sections.forEach(section => spy.observe(section));
+  tabs.values().next().value?.classList.add('is-active');
+}
 
 // Prevent browser scroll restoration jumps during dynamic JS hydration
 if ('scrollRestoration' in history) {
