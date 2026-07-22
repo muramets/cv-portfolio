@@ -95,7 +95,7 @@
       <span class="section-ribbon" data-text-id="about.contact.ribbon">Section 03 / Collab</span>
       <h2 class="section-title" data-text-id="about.contact.title">Get in Touch</h2>
 
-      <form action="mailto:muramets007@gmail.com" method="post" enctype="text/plain" class="form-stack">
+      <form id="contact-form" class="form-stack" novalidate data-formspree-url="https://formspree.io/f/mnjebqya">
         <div class="form-field">
           <label class="form-label" for="name" data-text-id="about.form.name">Your Name</label>
           <input class="form-input" type="text" id="name" name="name" placeholder="Saul Goodman" required>
@@ -108,7 +108,7 @@
           <label class="form-label" for="message" data-text-id="about.form.message">Project Details</label>
           <textarea class="form-input form-textarea" id="message" name="message" placeholder="Hi Ilia, I'd like to discuss a project..." required></textarea>
         </div>
-        <div>
+        <div class="form-submit-row">
           <button type="submit" class="btn-primary" data-text-id="about.form.submit">Send Message</button>
         </div>
       </form>

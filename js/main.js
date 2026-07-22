@@ -36,6 +36,7 @@ if (isAdmin()) {
   initDeckToggle();
   initTimelineCollapse();
 }
+initContactForm();
 
 // Prevent browser scroll restoration jumps during dynamic JS hydration
 if ('scrollRestoration' in history) {
@@ -124,13 +125,9 @@ function initTimelineCollapse() {
     const prevCount = visibleCount;
     visibleCount = Math.min(items.length, visibleCount + 3);
 
-    // Unseen content starts where the fade was cutting the pre-expand
-    // list — NOT at the first new card: the last visible card's tail was
-    // hidden under the gradient and must not fly past the viewer.
     const FADE_H = 140; // keep in sync with .timeline-list.has-fade::after
     const unseenTopViewport = list.getBoundingClientRect().bottom - FADE_H;
 
-    // Unhide newly revealed items for measurement
     for (let i = prevCount; i < visibleCount; i++) {
       if (items[i]) items[i].style.display = '';
     }
@@ -142,7 +139,6 @@ function initTimelineCollapse() {
       document.documentElement.style.overflowAnchor = 'none';
 
       const startScrollY = window.scrollY;
-      // Bring the start of the unseen zone to ~100px below the viewport top
       const targetScrollY = Math.max(0, startScrollY + unseenTopViewport - 100);
 
       const duration = 500;
@@ -190,15 +186,11 @@ function initTimelineCollapse() {
     const from = list.offsetHeight;
     const thirdItem = items[2];
 
-    // Non-destructive measurement of target height (first 3 items)
     const listRect = list.getBoundingClientRect();
     const thirdRect = thirdItem.getBoundingClientRect();
     const to = Math.round(thirdRect.bottom - listRect.top);
 
-    // Keep fade overlay active during fold so cards slide cleanly behind it
     list.classList.add('has-fade');
-
-    // Smoothly morph button label to 'Earlier timeline ↓' immediately during fold
     swapButtonText(getButtonText(3));
 
     const contactEl = document.getElementById('contact');
@@ -210,10 +202,8 @@ function initTimelineCollapse() {
       return;
     }
 
-    // Disable browser scroll anchoring to prevent scroll jitter during fold
     document.documentElement.style.overflowAnchor = 'none';
 
-    // Synchronized RAF Dual-Motion: Height fold + Scroll glide
     const startScrollY = window.scrollY;
     const deltaH = from - to;
 
@@ -261,15 +251,17 @@ function initTimelineCollapse() {
 }
 
 /* Past/Present deck rotation — public only (admin sees both panes
-   stacked for editing). Auto-flips every 5s, click switches manually,
-   hovering the deck pauses the clock. */
+   stacked for editing). Auto-flips every 10s (2x slower), click switches manually,
+   hovering the deck or text freezes auto-rotation cross-browser (including Safari). */
 function initDeckToggle() {
   const swap = document.querySelector('.deck-swap');
   if (!swap) return;
   const tabs = [...document.querySelectorAll('.deck-toggle [data-deck-tab]')];
   const panes = [...swap.querySelectorAll('[data-deck-pane]')];
+  const block = swap.closest('.masthead-deck-block') || swap;
   let active = 'past';
   let timer = null;
+  let isHovered = false;
 
   function show(id) {
     if (id === active) return;
@@ -277,17 +269,195 @@ function initDeckToggle() {
     tabs.forEach(t => t.classList.toggle('is-active', t.dataset.deckTab === id));
     panes.forEach(p => p.classList.toggle('is-active', p.dataset.deckPane === id));
   }
-  const flip = () => show(active === 'past' ? 'present' : 'past');
-  const start = () => { if (!timer) timer = setInterval(flip, 5000); };
-  const pause = () => { clearInterval(timer); timer = null; };
+
+  function isUserHovering() {
+    if (isHovered) return true;
+    try {
+      return Boolean(block && block.matches && block.matches(':hover'));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  const flip = () => {
+    if (isUserHovering()) return;
+    show(active === 'past' ? 'present' : 'past');
+  };
+
+  const start = () => {
+    if (!timer) timer = setInterval(flip, 10000);
+  };
+  const pause = () => {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+  };
+
+  const onEnter = () => {
+    isHovered = true;
+    pause();
+  };
+  const onLeave = () => {
+    isHovered = false;
+    pause();
+    start();
+  };
 
   tabs.forEach(t => t.addEventListener('click', () => {
     pause();
     show(t.dataset.deckTab);
-    start(); // manual pick restarts the 5s clock
+    if (!isUserHovering()) start();
   }));
-  const block = swap.closest('.masthead-deck-block');
-  block?.addEventListener('mouseenter', pause);
-  block?.addEventListener('mouseleave', start);
+
+  if (block) {
+    block.addEventListener('mouseenter', onEnter);
+    block.addEventListener('mouseleave', onLeave);
+    block.addEventListener('pointerenter', onEnter);
+    block.addEventListener('pointerleave', onLeave);
+  }
+
   start();
 }
+
+/* Floating Toast notification — admin toolbar style next to submit button */
+export function showToast(message, duration = 5000, container = null) {
+  document.querySelectorAll('.site-toast').forEach(t => t.remove());
+
+  const targetContainer = container || document.querySelector('.form-submit-row') || document.body;
+
+  const toast = document.createElement('div');
+  toast.className = 'site-toast';
+
+  const dot = document.createElement('span');
+  dot.className = 'site-toast-dot';
+
+  const text = document.createElement('span');
+  text.textContent = message;
+
+  toast.appendChild(dot);
+  toast.appendChild(text);
+  targetContainer.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('is-hiding');
+    toast.addEventListener('animationend', () => toast.remove(), { once: true });
+  }, duration);
+}
+
+/* Contact Form handling — no browser alert popup, custom inline field validation */
+function initContactForm() {
+  const form = document.getElementById('contact-form') || document.querySelector('.form-stack');
+  if (!form) return;
+
+  function clearErrors() {
+    form.querySelectorAll('.form-input').forEach(input => input.classList.remove('is-invalid'));
+    form.querySelectorAll('.form-error-msg').forEach(msg => msg.remove());
+  }
+
+  function showError(input, message) {
+    if (!input) return;
+    input.classList.add('is-invalid');
+    const parent = input.closest('.form-field') || input.parentElement;
+    if (parent && !parent.querySelector('.form-error-msg')) {
+      const err = document.createElement('span');
+      err.className = 'form-error-msg';
+      err.textContent = message;
+      parent.appendChild(err);
+    }
+  }
+
+  // Clear error state live on user input
+  form.querySelectorAll('.form-input').forEach(input => {
+    input.addEventListener('input', () => {
+      input.classList.remove('is-invalid');
+      const parent = input.closest('.form-field') || input.parentElement;
+      parent?.querySelector('.form-error-msg')?.remove();
+    });
+  });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    clearErrors();
+
+    const btn = form.querySelector('button[type="submit"]');
+    const nameInput = form.querySelector('#name');
+    const emailInput = form.querySelector('#email');
+    const msgInput = form.querySelector('#message');
+
+    const name = nameInput?.value.trim() || '';
+    const email = emailInput?.value.trim() || '';
+    const message = msgInput?.value.trim() || '';
+
+    let hasError = false;
+    let firstInvalidInput = null;
+
+    if (!name) {
+      showError(nameInput, 'Please fill in your name.');
+      hasError = true;
+      if (!firstInvalidInput) firstInvalidInput = nameInput;
+    }
+
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    if (!email) {
+      showError(emailInput, 'Please fill in your email address.');
+      hasError = true;
+      if (!firstInvalidInput) firstInvalidInput = emailInput;
+    } else if (!emailRegex.test(email)) {
+      showError(emailInput, 'Please enter a valid email address.');
+      hasError = true;
+      if (!firstInvalidInput) firstInvalidInput = emailInput;
+    }
+
+    if (!message) {
+      showError(msgInput, 'Please enter project details.');
+      hasError = true;
+      if (!firstInvalidInput) firstInvalidInput = msgInput;
+    }
+
+    if (hasError) {
+      firstInvalidInput?.focus();
+      return;
+    }
+
+    const originalText = btn ? btn.textContent : 'Send Message';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+    }
+
+    const endpoint = form.dataset.formspreeUrl;
+    if (endpoint) {
+      try {
+        const formData = new FormData(form);
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          body: formData,
+          headers: { 'Accept': 'application/json' }
+        });
+        if (res.ok) {
+          if (btn) btn.textContent = originalText;
+          form.reset();
+          showToast("Message sent! Thank you, I'll get back to you soon.", 5000);
+        } else {
+          showError(btn?.parentElement, 'Failed to send message. Please try again.');
+          if (btn) btn.textContent = originalText;
+        }
+      } catch (err) {
+        showError(btn?.parentElement, 'Connection error. Please try again.');
+        if (btn) btn.textContent = originalText;
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    } else {
+      const subject = encodeURIComponent(`Contact Form Submission from ${name}`);
+      const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`);
+      window.location.href = `mailto:muramets007@gmail.com?subject=${subject}&body=${body}`;
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+  });
+}
+

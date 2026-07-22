@@ -4,7 +4,7 @@
   "description": "Ilia Blinov's CV Portfolio website in The Verge design language",
   "main": "index.html",
   "scripts": {
-    "dev": "python3 dev-server.py 8000",
+    "dev": "node dev-server.js 8000",
     "check": "echo 'No compilation or lint errors for static website prototype.'"
   }
 }
