@@ -406,12 +406,6 @@
    curve, but let a chapter spend distance on a sticky visual composition. */
 .scroll-chapter__shutter { display: none; }
 
-@property --impact-text-reveal {
-  syntax: '<percentage>';
-  inherits: false;
-  initial-value: -50%;
-}
-
 @media (min-width: 901px) {
   body.page-about:not(.is-admin) {
     /* Shared lower edge for the sticky Impact composition and Journey's
@@ -510,7 +504,7 @@
     border-color: transparent;
     scale: 1;
     transition: scale 560ms cubic-bezier(0.22, 0.86, 0.24, 1), box-shadow 700ms cubic-bezier(0.22, 0.86, 0.24, 1), background-color 520ms cubic-bezier(0.22, 0.86, 0.24, 1), color 420ms cubic-bezier(0.22, 0.86, 0.24, 1);
-    will-change: clip-path, transform, scale;
+    will-change: opacity, transform, scale;
   }
 
   body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured.mint {
@@ -722,56 +716,20 @@
     }
 
     body.page-about:not(.is-admin) .scroll-chapter__content .story-tile {
-      animation: impact-tile-unfold 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+      /* Final size and radius exist from the first frame; the card is simply
+         revealed as a material surface, never geometrically morphed. */
+      animation: impact-card-surface-arrive 1s cubic-bezier(0.22, 0.82, 0.28, 1) both;
       animation-timeline: --impact-chapter;
       /* Cards are one body behind the doors, rather than a delayed queue. */
       animation-range: cover 29% cover 62%;
     }
 
-    /* The surface arrives first. Its typography resolves through a bottom
-       transparency gradient, so a card never reads as complete too early. */
+    /* Copy arrives as one complete layer only after the surface has begun to
+       resolve. No clipped glyphs, masks or partial text states are exposed. */
     body.page-about:not(.is-admin) .scroll-chapter__content .story-tile__content {
-      -webkit-mask-image: linear-gradient(
-        to bottom,
-        #000 calc(var(--impact-text-reveal) - 16%),
-        rgba(0, 0, 0, 0.22) calc(var(--impact-text-reveal) + 12%),
-        transparent calc(var(--impact-text-reveal) + 36%)
-      );
-      mask-image: linear-gradient(
-        to bottom,
-        #000 calc(var(--impact-text-reveal) - 16%),
-        rgba(0, 0, 0, 0.22) calc(var(--impact-text-reveal) + 12%),
-        transparent calc(var(--impact-text-reveal) + 36%)
-      );
-      -webkit-mask-repeat: no-repeat;
-      mask-repeat: no-repeat;
-      animation: impact-text-clarify 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation: impact-card-content-arrive 1s cubic-bezier(0.22, 0.82, 0.28, 1) both;
       animation-timeline: --impact-chapter;
-      animation-range: cover 29% cover 62%;
-    }
-
-    /* Chrome can occasionally flatten a child mask inside the featured card's
-       animated clip-path. This matching surface gradient guarantees the same
-       bottom-to-top text reveal for the mint card in that compositor path. */
-    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured.mint .story-tile__content {
-      position: relative;
-    }
-
-    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured.mint .story-tile__content::after {
-      content: '';
-      position: absolute;
-      z-index: 1;
-      inset: 0;
-      pointer-events: none;
-      background: linear-gradient(
-        to bottom,
-        transparent calc(var(--impact-text-reveal) - 16%),
-        color-mix(in srgb, var(--impact-mint-text-surface) 40%, transparent) calc(var(--impact-text-reveal) + 12%),
-        var(--impact-mint-text-surface) calc(var(--impact-text-reveal) + 36%)
-      );
-      animation: impact-text-clarify 1s cubic-bezier(0.16, 1, 0.3, 1) both;
-      animation-timeline: --impact-chapter;
-      animation-range: cover 29% cover 62%;
+      animation-range: cover 36% cover 62%;
     }
 
     body.page-about:not(.is-admin) .section--journey .journey-layout {
@@ -817,30 +775,21 @@
 
 @keyframes impact-heading-settle {
   /* The heading begins at the visual centre of the viewport. It rises with
-     the opening, instead of dropping in from the top of the composition. */
+     the opening in one unbroken move, instead of stepping through a midpoint. */
   0%, 26% {
     opacity: 0;
     transform: translateY(calc(50svh - 50% - clamp(24px, 3vw, 40px)));
-    animation-timing-function: cubic-bezier(0.33, 0, 0.55, 0.52);
-  }
-  38% {
-    opacity: 0.7;
-    transform: translateY(calc(38svh - 50% - clamp(24px, 3vw, 40px)));
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    animation-timing-function: cubic-bezier(0.22, 0.82, 0.28, 1);
   }
   64%, 100% { opacity: 1; transform: none; }
 }
 
 @keyframes impact-content-follow {
   /* This is the heading's wake: its first cards sit just beneath the title
-     at the centre, then the whole grid settles into its final architecture. */
+     at the centre, then the whole grid settles in one continuous pull. */
   0%, 26% {
     transform: translateY(calc(50svh - clamp(76px, 10svh, 124px)));
-    animation-timing-function: cubic-bezier(0.33, 0, 0.55, 0.52);
-  }
-  38% {
-    transform: translateY(calc(34svh - clamp(54px, 7svh, 88px)));
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    animation-timing-function: cubic-bezier(0.22, 0.82, 0.28, 1);
   }
   64%, 100% { transform: none; }
 }
@@ -860,20 +809,26 @@
   to { transform: none; }
 }
 
-@keyframes impact-tile-unfold {
+@keyframes impact-card-surface-arrive {
   from {
-    clip-path: inset(0 0 100% 0 round var(--radius-tile));
-    transform: translateY(18px);
+    opacity: 0;
+    transform: scale(0.985);
   }
   to {
-    clip-path: inset(0 0 0 0 round var(--radius-tile));
+    opacity: 1;
     transform: none;
   }
 }
 
-@keyframes impact-text-clarify {
-  from { --impact-text-reveal: -50%; }
-  to { --impact-text-reveal: 150%; }
+@keyframes impact-card-content-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Empty state on stub pages */

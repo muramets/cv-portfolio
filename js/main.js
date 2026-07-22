@@ -41,6 +41,7 @@ if (isAdmin()) {
   pruneEmptyNav(); // hide links to pages that have nothing on them yet
   initDeckToggle();
   initTimelineCollapse();
+  initJourneyExplorerGlow();
 }
 initContactForm();
 initMobileNav();
@@ -619,6 +620,71 @@ document.addEventListener('click', e => {
    Button text progresses: "Earlier timeline ↓" → "Another life ↓" → "Recent only ↑".
    Collapsing uses a non-destructive dual-motion animation to fold the list and
    bring Get in Touch into focus seamlessly. */
+function initJourneyExplorerGlow() {
+  const surface = document.querySelector('.section--journey');
+  if (!surface || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+  const followTime = 82;
+  let glowFrame = null;
+  let lastGlowTime = 0;
+  let targetGlow = null;
+  let currentGlow = null;
+
+  const getGlowPoint = sample => {
+    const rect = surface.getBoundingClientRect();
+    return {
+      x: Math.min(rect.width, Math.max(0, sample.x - rect.left)),
+      y: Math.min(rect.height, Math.max(0, sample.y - rect.top)),
+    };
+  };
+
+  const applyGlowPoint = point => {
+    surface.style.setProperty('--journey-glow-x', point.x + 'px');
+    surface.style.setProperty('--journey-glow-y', point.y + 'px');
+    surface.classList.add('is-journey-exploring');
+  };
+
+  const renderGlow = now => {
+    glowFrame = null;
+    if (!targetGlow) return;
+
+    const target = getGlowPoint(targetGlow);
+    if (!currentGlow) currentGlow = { ...target };
+    const elapsed = lastGlowTime ? Math.min(64, now - lastGlowTime) : 16.7;
+    lastGlowTime = now;
+    const follow = 1 - Math.exp(-elapsed / followTime);
+    currentGlow.x += (target.x - currentGlow.x) * follow;
+    currentGlow.y += (target.y - currentGlow.y) * follow;
+
+    const remaining = Math.hypot(target.x - currentGlow.x, target.y - currentGlow.y);
+    if (remaining < 0.15) currentGlow = target;
+    applyGlowPoint(currentGlow);
+    if (remaining >= 0.15) glowFrame = requestAnimationFrame(renderGlow);
+  };
+
+  const setGlowTarget = point => {
+    targetGlow = { ...point };
+    if (!currentGlow) {
+      currentGlow = getGlowPoint(targetGlow);
+      applyGlowPoint(currentGlow);
+    }
+    if (!glowFrame) glowFrame = requestAnimationFrame(renderGlow);
+  };
+
+  surface.addEventListener('pointerenter', event => {
+    setGlowTarget({ x: event.clientX, y: event.clientY });
+  });
+  surface.addEventListener('pointermove', event => {
+    setGlowTarget({ x: event.clientX, y: event.clientY });
+  }, { passive: true });
+  surface.addEventListener('pointerleave', () => {
+    targetGlow = null;
+    currentGlow = null;
+    lastGlowTime = 0;
+    surface.classList.remove('is-journey-exploring');
+  });
+}
+
 function initTimelineCollapse() {
   const list = document.querySelector('.timeline-list');
   const items = list ? Array.from(list.querySelectorAll('.timeline-item')) : [];
@@ -705,6 +771,81 @@ function initTimelineCollapse() {
 
   // Initial state: show first 3 items with bottom fade
   updateVisibility();
+
+  const timelineSurface = list.closest('.journey-layout__timeline');
+  if (timelineSurface && matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    // No queued delay: each target is immediate, while the rendered position
+    // catches up continuously to create a liquid, non-stepped trail.
+    const glowFollowTime = 82;
+    let glowFrame = null;
+    let lastGlowTime = 0;
+    let lastPointer = null;
+    let targetGlow = null;
+    let currentGlow = null;
+
+    const getGlowPoint = sample => {
+      const rect = timelineSurface.getBoundingClientRect();
+      // The field may cross the card gutters too; the cards stay above it,
+      // so the light only becomes visible in the breathing room between them.
+      const x = Math.min(rect.width - 12, Math.max(12, sample.x - rect.left));
+      const y = Math.max(0, Math.min(rect.height, sample.y - rect.top));
+      return { x, y };
+    };
+
+    const applyGlowPoint = point => {
+      timelineSurface.style.setProperty('--timeline-glow-x', point.x + 'px');
+      timelineSurface.style.setProperty('--timeline-glow-y', point.y + 'px');
+      timelineSurface.classList.add('is-timeline-exploring');
+    };
+
+    const renderLiquidGlow = now => {
+      glowFrame = null;
+      if (!targetGlow) return;
+
+      const target = getGlowPoint(targetGlow);
+      if (!currentGlow) currentGlow = { ...target };
+      const elapsed = lastGlowTime ? Math.min(64, now - lastGlowTime) : 16.7;
+      lastGlowTime = now;
+      const follow = 1 - Math.exp(-elapsed / glowFollowTime);
+      currentGlow.x += (target.x - currentGlow.x) * follow;
+      currentGlow.y += (target.y - currentGlow.y) * follow;
+
+      const remaining = Math.hypot(target.x - currentGlow.x, target.y - currentGlow.y);
+      if (remaining < 0.15) currentGlow = target;
+      applyGlowPoint(currentGlow);
+
+      if (remaining >= 0.15) {
+        glowFrame = requestAnimationFrame(renderLiquidGlow);
+      }
+    };
+
+    const setGlowTarget = point => {
+      lastPointer = point;
+      targetGlow = { ...point };
+      if (!currentGlow) {
+        currentGlow = getGlowPoint(targetGlow);
+        applyGlowPoint(currentGlow);
+      }
+      if (!glowFrame) glowFrame = requestAnimationFrame(renderLiquidGlow);
+    };
+
+    timelineSurface.addEventListener('pointerenter', event => {
+      setGlowTarget({ x: event.clientX, y: event.clientY });
+    });
+    timelineSurface.addEventListener('pointermove', event => {
+      setGlowTarget({ x: event.clientX, y: event.clientY });
+    }, { passive: true });
+    timelineSurface.addEventListener('pointerleave', () => {
+      targetGlow = null;
+      currentGlow = null;
+      lastGlowTime = 0;
+      lastPointer = null;
+      timelineSurface.classList.remove('is-timeline-exploring');
+    });
+    window.addEventListener('scroll', () => {
+      if (lastPointer) setGlowTarget(lastPointer);
+    }, { passive: true });
+  }
 
   window.addEventListener('resize', () => {
     window.requestAnimationFrame(() => {
