@@ -40,6 +40,15 @@ initContactForm();
 initMobileNav();
 initSectionBar();
 placeStatusForMobile();
+placeKickerInNav();
+
+function placeKickerInNav() {
+  const kicker = document.querySelector('.masthead-kicker');
+  const vnav = document.querySelector('.vnav');
+  if (kicker && vnav && !vnav.contains(kicker)) {
+    vnav.prepend(kicker);
+  }
+}
 
 /* Mobile: the status label (COOKING… / Available for Collab) moves from
    the meta row into the hero row — between the wordmark and the avatar.

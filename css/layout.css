@@ -22,10 +22,22 @@
 }
 .site-header-inner > .vnav { align-self: stretch; }
 
-/* Top band: nav pinned right, bottom-bordered like The Verge */
+/* Top band: kicker left, nav right, bottom-bordered like The Verge */
 .vnav {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.vnav .masthead-kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.8px;
+  color: var(--secondary-text);
+  margin-right: 16px;
 }
 
 .vnav ul {
@@ -506,19 +518,7 @@ body:not(.is-admin) .footer-col span:empty { display: none; }
     top: 6px;
     left: 6px;
   }
-  .masthead-meta-row {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding-right: 48px;
-    min-height: 40px;
-  }
-  .masthead-kicker {
-    font-size: clamp(9px, 2.6vw, 11px);
-    letter-spacing: 1.2px;
-    line-height: 1.25;
-  }
+  .masthead-meta-row:empty { display: none; }
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -531,17 +531,13 @@ body:not(.is-admin) .footer-col span:empty { display: none; }
 html.drawer-open { overflow: hidden; }
 
 @media (max-width: 650px) {
-  .site-header-inner {
-    position: relative;
-    padding-top: 16px;
-  }
-  .site-header-inner > .vnav {
-    position: absolute;
-    top: 12px;
-    right: 0;
-    z-index: 10;
-  }
   .vnav ul { display: none; }
+  .vnav .masthead-kicker {
+    font-size: clamp(9px, 2.6vw, 11px);
+    letter-spacing: 1.2px;
+    line-height: 1.25;
+    margin-right: 12px;
+  }
 
   .nav-burger {
     display: flex;
