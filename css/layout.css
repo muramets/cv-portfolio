@@ -253,6 +253,47 @@
   margin-bottom: 8px;
 }
 
+/* Desktop status badge anchored directly above avatar */
+.masthead-avatar-wrap .masthead-date {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  white-space: nowrap;
+  background: var(--canvas);
+  border: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--verge-ultraviolet);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.masthead-avatar-wrap .masthead-date::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--jelly-mint);
+  box-shadow: 0 0 0 2px rgba(60, 255, 208, 0.3);
+  animation: pulse-status 2s infinite;
+}
+
+@keyframes pulse-status {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(60, 255, 208, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(60, 255, 208, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(60, 255, 208, 0); }
+}
+
 .masthead-avatar {
   width: 260px;
   height: 260px;

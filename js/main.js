@@ -53,8 +53,13 @@ function placeStatusForMobile() {
   const avatar = heroRow.querySelector('.masthead-avatar-wrap');
   const mq = matchMedia('(max-width: 650px)');
   const apply = () => {
-    if (mq.matches) heroRow.insertBefore(status, avatar ?? null);
-    else metaRow.append(status);
+    if (mq.matches) {
+      heroRow.insertBefore(status, avatar ?? null);
+    } else if (avatar) {
+      avatar.prepend(status);
+    } else {
+      metaRow.append(status);
+    }
   };
   mq.addEventListener('change', apply);
   apply();
