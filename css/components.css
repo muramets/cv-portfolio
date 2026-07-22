@@ -213,11 +213,28 @@
   margin-left: 8px;
   position: relative;
 }
-/* Height is the one non-composited part of the disclosure. Temporarily
-   contain its layout work so Safari does not invalidate the full page tree. */
+/* The disclosure changes only its own layout while the list is folding. */
 .timeline-list.is-resizing {
   contain: layout;
-  will-change: height;
+}
+
+/* During the reverse disclosure the clipping edge is preceded by a soft
+   paper dissolve. Cards are eaten from the bottom instead of disappearing at
+   one hard overflow boundary while Journey rolls up. */
+.timeline-list.is-collapsing {
+  --timeline-collapse-fade: clamp(220px, 24vw, 300px);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--timeline-collapse-fade)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--timeline-collapse-fade)),
+    transparent 100%
+  );
 }
 
 /* A separate rail can dissolve exactly with the final visible role. A CSS
@@ -340,11 +357,17 @@
   opacity: 1;
   animation: timeline-glow-morph-secondary 3.6s cubic-bezier(0.37, 0, 0.63, 1) infinite alternate;
 }
-/* Safari retains the cursor-following field, but not its perpetual morphing layers
-   to ensure 60-120fps GPU compositing during scroll and interaction. */
-html.is-webkit-safari .journey-layout__timeline.is-timeline-exploring .timeline-glow-primary::before,
-html.is-webkit-safari .journey-layout__timeline.is-timeline-exploring .timeline-glow-secondary::before {
-  animation: none;
+/* Disable timeline glow layer in Safari on Journey section per user request */
+html.is-webkit-safari .journey-layout__timeline .timeline-glow-layer {
+  display: none !important;
+}
+/* A feTurbulence SVG plus multiply blend creates a separate backing texture
+   for every visible card in WebKit. The non-Safari paper treatment remains
+   unchanged; Safari keeps the same colours with a flat surface. */
+html.is-webkit-safari body.page-about:not(.is-admin) .section--journey .timeline-body,
+html.is-webkit-safari body.page-about:not(.is-admin) .section--journey .timeline-expand {
+  background-image: none;
+  background-blend-mode: normal;
 }
 @keyframes timeline-glow-morph-primary {
   from { scale: 0.90 1.08; rotate: -2deg; }
@@ -614,7 +637,7 @@ body.page-about:not(.is-admin) .section--journey > .journey-layout {
 
 /* Cards arriving on "Earlier timeline" — soft rise, staggered via JS */
 .timeline-item.is-revealing {
-  animation: timeline-reveal 640ms cubic-bezier(0.22, 0.86, 0.24, 1) backwards;
+  animation: timeline-reveal 520ms cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
 }
 
 @keyframes timeline-reveal {

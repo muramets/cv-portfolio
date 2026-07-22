@@ -238,8 +238,12 @@ function initSectionBar() {
   bar.setAttribute('aria-label', 'Page sections');
 
   const tabs = new Map();
+  const getSectionFocus = section => (section.id === 'experience'
+    ? section.querySelector('.timeline-item')
+    : section.querySelector('.section-title')) || section;
   const getSectionViewportTarget = section => {
     const floatingInset = Math.max(96, (bar.offsetHeight || 0) + 28);
+    const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
 
     if (section.id === 'achievements') {
       const chapter = section.querySelector('.scroll-chapter--impact');
@@ -251,10 +255,11 @@ function initSectionBar() {
       }
     }
 
-    const focus = section.id === 'experience'
-      ? section.querySelector('.timeline-item')
-      : section.querySelector('.section-title') || section;
-    return Math.max(0, window.scrollY + focus.getBoundingClientRect().top - floatingInset);
+    const focus = getSectionFocus(section);
+    const target = Math.max(0, window.scrollY + focus.getBoundingClientRect().top - floatingInset);
+    return section === sections[sections.length - 1]
+      ? Math.min(target, Math.max(0, maxScroll - 8))
+      : target;
   };
 
   sections.forEach(section => {
@@ -264,24 +269,33 @@ function initSectionBar() {
     tab.type = 'button';
     tab.className = 'section-bar-tab';
     tab.textContent = label;
-    tab.addEventListener('click', () => {
-      const target = getSectionViewportTarget(section);
-      if (reduced) {
-        window.scrollTo({ top: target, behavior: 'auto' });
-      } else if (lenisInstance) {
-        lenisInstance.scrollTo(target, {
-          duration: ANCHOR_SCROLL_DURATION,
-          easing: anchorScrollEasing,
-        });
-      } else {
-        window.scrollTo({ top: target, behavior: 'smooth' });
-      }
-    });
+    tab.addEventListener('click', () => navigateToSection(section));
     tabs.set(section, tab);
     bar.append(tab);
   });
 
   document.body.append(bar);
+
+  let activeSection = null;
+  let indicatorFrame = null;
+  let activeNavigation = null;
+  const syncActiveIndicator = () => {
+    indicatorFrame = null;
+    const activeTab = activeSection && tabs.get(activeSection);
+    if (!activeTab) return;
+
+    const barRect = bar.getBoundingClientRect();
+    const tabRect = activeTab.getBoundingClientRect();
+    bar.style.setProperty('--section-bar-indicator-x', (tabRect.left - barRect.left) + 'px');
+    bar.style.setProperty('--section-bar-indicator-width', tabRect.width + 'px');
+    bar.classList.add('has-active-indicator');
+  };
+  const setActiveSection = section => {
+    if (!section || section === activeSection) return;
+    activeSection = section;
+    tabs.forEach((tab, target) => tab.classList.toggle('is-active', target === section));
+    if (!indicatorFrame) indicatorFrame = requestAnimationFrame(syncActiveIndicator);
+  };
 
   // IntersectionObserver makes the bar appear after the header without a
   // scroll listener or layout read on every animation frame.
@@ -294,15 +308,85 @@ function initSectionBar() {
     headerObserver.observe(header);
   }
 
-  const spy = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) return;
-      tabs.forEach(tab => tab.classList.remove('is-active'));
-      tabs.get(entry.target)?.classList.add('is-active');
+  // The active tab is derived from the same document coordinate used for
+  // navigation. This remains correct when Impact overlaps Journey and when
+  // Journey changes height while roles are expanded or collapsed.
+  let spyFrame = null;
+  const syncScrollSpy = () => {
+    spyFrame = null;
+    if (activeNavigation) return;
+
+    const currentScroll = window.scrollY;
+    const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const isAtBottom = maxScroll > 0 && currentScroll >= maxScroll - 12;
+
+    let nextSection = sections[0];
+    sections.slice(1).forEach(section => {
+      const target = getSectionViewportTarget(section);
+      if (currentScroll + 1 >= target) nextSection = section;
     });
-  }, { rootMargin: '-30% 0px -60% 0px' });
-  sections.forEach(section => spy.observe(section));
-  tabs.values().next().value?.classList.add('is-active');
+
+    if (isAtBottom) {
+      nextSection = sections[sections.length - 1];
+    }
+
+    setActiveSection(nextSection);
+  };
+  const scheduleScrollSpy = () => {
+    if (!spyFrame) spyFrame = requestAnimationFrame(syncScrollSpy);
+  };
+  const releaseNavigationSelection = () => {
+    if (!activeNavigation) return;
+    activeNavigation = null;
+    scheduleScrollSpy();
+  };
+  window.addEventListener('scroll', scheduleScrollSpy, { passive: true });
+  window.addEventListener('resize', scheduleScrollSpy, { passive: true });
+  window.addEventListener('wheel', releaseNavigationSelection, { passive: true });
+  window.addEventListener('touchstart', releaseNavigationSelection, { passive: true });
+  document.addEventListener('keydown', event => {
+    if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', 'Space'].includes(event.code)) {
+      releaseNavigationSelection();
+    }
+  });
+  scheduleScrollSpy();
+
+  function navigateToSection(section) {
+    const target = getSectionViewportTarget(section);
+    const navigation = { section };
+    activeNavigation = navigation;
+    setActiveSection(section);
+
+    const finish = () => {
+      if (activeNavigation !== navigation) return;
+      // Keep the explicit selection through Lenis's final scroll events.
+      // Direct manipulation is the only thing that hands control back to the
+      // scrollspy (see releaseNavigationSelection above).
+      navigation.settled = true;
+      setActiveSection(section);
+    };
+
+    if (Math.abs(target - window.scrollY) <= 1) {
+      finish();
+    } else if (reduced) {
+      window.scrollTo({ top: target, behavior: 'auto' });
+      finish();
+    } else if (lenisInstance) {
+      lenisInstance.scrollTo(target, {
+        duration: ANCHOR_SCROLL_DURATION,
+        easing: anchorScrollEasing,
+        onComplete: finish,
+      });
+    } else {
+      window.scrollTo({ top: target, behavior: 'smooth' });
+      const waitForTarget = () => {
+        if (activeNavigation !== navigation) return;
+        if (Math.abs(target - window.scrollY) <= 1) finish();
+        else requestAnimationFrame(waitForTarget);
+      };
+      requestAnimationFrame(waitForTarget);
+    }
+  }
 }
 
 // Prevent browser scroll restoration jumps during dynamic JS hydration
@@ -690,33 +774,19 @@ document.addEventListener('click', e => {
 /* Professional Journey: visitors get the three most recent roles; the
    earlier ones wait behind a fade and expand by 3 cards at a time.
    Button text progresses: "Earlier timeline ↓" → "Another life ↓" → "Recent only ↑".
-   Collapsing uses a non-destructive dual-motion animation to fold the list and
-   bring Get in Touch into focus seamlessly. */
+   Collapsing plays the same geometry in reverse, then follows the ordinary
+   down-page path into Get in Touch. */
 function initTimelineCollapse() {
   const list = document.querySelector('.timeline-list');
   const items = list ? Array.from(list.querySelectorAll('.timeline-item')) : [];
   if (!list || items.length <= 3) return;
 
   let visibleCount = 3;
-  const timelineMotionMs = 680;
-  const timelineMotionEasing = t => {
-    // Exact JS counterpart of cubic-bezier(.37, 0, .63, 1), used below by
-    // Lenis so document travel and the list's height share one trajectory.
-    let lower = 0;
-    let upper = 1;
-    let curveT = t;
-    for (let i = 0; i < 12; i++) {
-      curveT = (lower + upper) / 2;
-      const inverse = 1 - curveT;
-      const x = 3 * inverse * inverse * curveT * 0.37
-        + 3 * inverse * curveT * curveT * 0.63
-        + curveT * curveT * curveT;
-      if (x < t) lower = curveT;
-      else upper = curveT;
-    }
-    const inverse = 1 - curveT;
-    return 3 * inverse * curveT * curveT + curveT * curveT * curveT;
-  };
+  const timelineMotionMs = 520;
+  const timelineMotionCurve = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
+  const contactFocusDuration = 0.9;
+  // Equivalent to cubic-bezier(.333, 1, .667, 1): quick pickup, soft settle.
+  const contactFocusEasing = t => 1 - Math.pow(1 - t, 3);
   const returnCueListeners = new Map();
 
   function clearTimelineReturnCue(role, resetVisual = false) {
@@ -780,7 +850,9 @@ function initTimelineCollapse() {
   updateVisibility();
 
   const timelineSurface = list.closest('.journey-layout__timeline');
-  if (timelineSurface && matchMedia('(hover: hover) and (pointer: fine)').matches) {
+  // Safari deliberately has no Journey glow (see components.css), so do not
+  // keep a hidden layer and its scroll listeners alive there.
+  if (timelineSurface && !isWebKitSafari && matchMedia('(hover: hover) and (pointer: fine)').matches) {
     let glowLayer = timelineSurface.querySelector('.timeline-glow-layer');
     if (!glowLayer) {
       glowLayer = document.createElement('div');
@@ -918,18 +990,6 @@ function initTimelineCollapse() {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let isTimelineAnimating = false;
 
-  const scrollWithTimeline = (target, { duration = 0.82, easing = anchorScrollEasing } = {}) => {
-    if (Math.abs(target - window.scrollY) <= 2) return;
-    if (lenisInstance) {
-      lenisInstance.scrollTo(target, {
-        duration,
-        easing,
-      });
-    } else {
-      window.scrollTo({ top: target, behavior: 'smooth' });
-    }
-  };
-
   function getButtonText(count) {
     if (count >= items.length) return 'Recent only ↑';
     if (count > 3) return 'Another life ↓';
@@ -949,143 +1009,159 @@ function initTimelineCollapse() {
     }, 150);
   }
 
-  function runHeight(from, to, done) {
+  function revealItems(from, to) {
+    for (let index = from; index < to; index++) {
+      const item = items[index];
+      if (!item) continue;
+      item.style.display = '';
+      if (reduced) continue;
+
+      item.classList.add('is-revealing');
+      item.style.animationDelay = (index - from) * 60 + 'ms';
+      item.addEventListener('animationend', () => {
+        item.classList.remove('is-revealing');
+        item.style.animationDelay = '';
+      }, { once: true });
+    }
+  }
+
+  function animateListHeight(from, to, duration = timelineMotionMs, curve = timelineMotionCurve) {
+    if (from === to) {
+      list.style.height = list.style.overflow = list.style.transition = '';
+      return Promise.resolve();
+    }
+
     list.classList.add('is-resizing');
     list.style.height = from + 'px';
     list.style.overflow = 'hidden';
     list.style.transition = 'none';
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        list.style.transition = `height ${timelineMotionMs}ms cubic-bezier(0.37, 0, 0.63, 1)`;
-        list.style.height = to + 'px';
-      });
-    });
+    return new Promise(resolve => {
+      let settled = false;
+      const onTransitionEnd = event => {
+        if (event.target === list && event.propertyName === 'height') finish();
+      };
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        list.removeEventListener('transitionend', onTransitionEnd);
+        window.clearTimeout(fallback);
+        list.classList.remove('is-resizing');
+        list.style.height = list.style.overflow = list.style.transition = '';
+        resolve();
+      };
+      const fallback = window.setTimeout(finish, duration + 100);
 
-    let complete = false;
-    const clear = e => {
-      if (e && e.propertyName && e.propertyName !== 'height') return;
-      if (complete) return;
-      complete = true;
-      list.removeEventListener('transitionend', clear);
-      window.clearTimeout(fallback);
-      done?.();
-      list.classList.remove('is-resizing');
-      list.style.height = list.style.overflow = list.style.transition = '';
-    };
-    const fallback = window.setTimeout(clear, timelineMotionMs + 80);
-    list.addEventListener('transitionend', clear);
+      list.addEventListener('transitionend', onTransitionEnd);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        list.style.transition = `height ${duration}ms ${curve}`;
+        list.style.height = to + 'px';
+      }));
+    });
   }
 
-  function expandNext() {
+  function scrollToPageEnd(target) {
+    if (Math.abs(target - window.scrollY) <= 2) return Promise.resolve();
+    const viewportDistance = Math.abs(target - window.scrollY) / window.innerHeight;
+    const duration = Math.min(1.6, Math.max(contactFocusDuration, 0.62 + viewportDistance * 0.24));
+    if (lenisInstance) {
+      return new Promise(resolve => {
+        lenisInstance.scrollTo(target, {
+          duration,
+          easing: contactFocusEasing,
+          onComplete: resolve,
+        });
+      });
+    }
+
+    window.scrollTo({ top: target, behavior: 'smooth' });
+    return new Promise(resolve => window.setTimeout(resolve, duration * 1000));
+  }
+
+  function getPageEndTarget() {
+    return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  }
+
+  async function expandNext() {
     const prevCount = visibleCount;
-    const fromHeight = list.offsetHeight;
+    const fromHeight = reduced ? 0 : list.offsetHeight;
+    const contextRole = items[prevCount - 1];
 
     visibleCount = Math.min(items.length, visibleCount + 3);
-
-    // Find the reading anchor before the DOM grows. It is the previously
-    // visible role, which remains geometrically unchanged by cards appended
-    // below it.
-    const contextRole = items[Math.max(0, prevCount - 1)];
-    const contextRoleTop = contextRole?.getBoundingClientRect().top
-      ?? list.getBoundingClientRect().bottom;
-    const targetScrollY = Math.max(0, window.scrollY + contextRoleTop - 76);
-
-    for (let i = prevCount; i < visibleCount; i++) {
-      if (items[i]) items[i].style.display = '';
-    }
+    revealItems(prevCount, visibleCount);
     list.classList.toggle('has-fade', visibleCount < items.length);
     setFadingRole();
+    swapButtonText(getButtonText(visibleCount));
+    if (reduced) return;
 
     const toHeight = list.scrollHeight;
-
-    if (!reduced) {
-      isTimelineAnimating = true;
-      document.documentElement.style.overflowAnchor = 'none';
-
-      for (let i = prevCount; i < visibleCount; i++) {
-        const item = items[i];
-        if (!item) continue;
-        item.classList.add('is-revealing');
-        item.style.animationDelay = (i - prevCount) * 70 + 'ms';
-        item.addEventListener('animationend', () => {
-          item.classList.remove('is-revealing');
-          item.style.animationDelay = '';
-        }, { once: true });
-      }
-
-      runHeight(fromHeight, toHeight, () => {
-        document.documentElement.style.overflowAnchor = '';
-        isTimelineAnimating = false;
-      });
-
-      setTimelineReturnCue(contextRole);
-      scrollWithTimeline(targetScrollY, {
-        duration: timelineMotionMs / 1000,
-        easing: timelineMotionEasing,
-      });
-    }
-
-    swapButtonText(getButtonText(visibleCount));
+    isTimelineAnimating = true;
+    document.documentElement.style.overflowAnchor = 'none';
+    setTimelineReturnCue(contextRole);
+    await animateListHeight(fromHeight, toHeight);
+    document.documentElement.style.overflowAnchor = '';
+    isTimelineAnimating = false;
   }
 
-  function collapseToRecent() {
+  async function collapseToRecent() {
     items.forEach(item => clearTimelineReturnCue(item, true));
-    const from = list.offsetHeight;
-    const thirdItem = items[2];
-
-    const listRect = list.getBoundingClientRect();
-    const thirdRect = thirdItem.getBoundingClientRect();
-    const to = Math.round(thirdRect.bottom - listRect.top);
-
-    list.classList.add('has-fade');
-    setFadingRole(3);
-    swapButtonText(getButtonText(3));
-
-    const contactEl = document.getElementById('contact');
 
     if (reduced) {
       visibleCount = 3;
       updateVisibility();
-      (contactEl || btn).scrollIntoView({ behavior: 'auto' });
+      swapButtonText(getButtonText(3));
+      window.scrollTo({ top: getPageEndTarget(), behavior: 'auto' });
       return;
     }
 
-    document.documentElement.style.overflowAnchor = 'none';
     isTimelineAnimating = true;
+    const originalOverflowAnchor = document.documentElement.style.overflowAnchor;
+    try {
+      // Collapse is the direct reverse of expanding: the visible roles stay
+      // in the list while its clipping edge rises to the three-role height.
+      // This preserves the full closing animation instead of replacing it
+      // with an instantaneous compact layout.
+      const fromHeight = list.offsetHeight;
+      const listTop = list.getBoundingClientRect().top;
+      const thirdRoleBottom = items[2].getBoundingClientRect().bottom;
+      const toHeight = Math.round(thirdRoleBottom - listTop);
 
-    // Contact will rise by exactly this much as the list closes. Calculate its
-    // final document position before either animation starts, then move both
-    // the viewport and the list along the same curve.
-    const startScrollY = window.scrollY;
-    const deltaH = from - to;
-    const floatingBar = document.querySelector('.section-bar.is-visible');
-    const inset = floatingBar
-      ? floatingBar.getBoundingClientRect().bottom + 24
-      : 32;
-    const contactRect = contactEl?.getBoundingClientRect();
-    const targetScrollY = contactRect
-      ? Math.max(0, startScrollY + contactRect.top - deltaH - inset)
-      : startScrollY;
+      list.classList.add('has-fade');
+      list.classList.add('is-collapsing');
+      setFadingRole(3);
+      swapButtonText(getButtonText(3));
 
-    runHeight(from, to, () => {
+      // Journey folds upward from its lower edge. The viewport is not
+      // compensated here: keeping its position lets the lower page rise and
+      // the collapse mask consume cards instead of pushing them downward.
+      document.documentElement.style.overflowAnchor = 'none';
+      await animateListHeight(fromHeight, toHeight);
+
+      // Remove the clipped roles only once the list has reached its natural
+      // compact height. This no longer changes document geometry.
       visibleCount = 3;
       updateVisibility();
-      document.documentElement.style.overflowAnchor = '';
+      list.classList.remove('is-collapsing');
+
+      // Let the compact layout settle, then use the one
+      // visible Lenis trajectory to travel through Contact to the real page
+      // end. There is no compensating scrollTo in between.
+      await new Promise(r => requestAnimationFrame(r));
+      lenisInstance?.resize?.();
+      await scrollToPageEnd(getPageEndTarget());
+    } finally {
+      document.documentElement.style.overflowAnchor = originalOverflowAnchor;
+      list.classList.remove('is-collapsing');
       isTimelineAnimating = false;
-    });
-    scrollWithTimeline(targetScrollY, {
-      duration: timelineMotionMs / 1000,
-      easing: timelineMotionEasing,
-    });
+    }
   }
 
   btn.addEventListener('click', () => {
     if (isTimelineAnimating) return;
     if (visibleCount >= items.length) {
-      collapseToRecent();
+      void collapseToRecent();
     } else {
-      expandNext();
+      void expandNext();
     }
   });
 }

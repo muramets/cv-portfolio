@@ -745,14 +745,24 @@
       animation-name: none;
       transform: none;
       box-shadow: 0 -22px 48px rgba(19, 19, 19, 0.14);
+      /* WebKit composites this long SVG-noise/blend surface as one texture.
+         The cost grows with every disclosed role, while the grain is purely
+         decorative, so use the flat paper base for this browser only. */
+      background-image: none;
+      background-blend-mode: normal;
+      overflow: visible;
+      isolation: auto;
+      view-timeline-name: none;
     }
     html.is-webkit-safari body.page-about:not(.is-admin) .section--journey .journey-layout {
       animation-name: none;
     }
     html.is-webkit-safari body.page-about:not(.is-admin) .journey-layout__intro {
-      animation: journey-intro-arrive-webkit 1s cubic-bezier(0.22, 0.61, 0.36, 1) both;
-      animation-timeline: --journey-chapter;
-      animation-range: entry 0% entry 34%;
+      animation: none;
+      animation-timeline: auto;
+    }
+    html.is-webkit-safari body.page-about:not(.is-admin) .journey-layout__timeline {
+      isolation: auto;
     }
 
   }
@@ -1007,6 +1017,8 @@ html.drawer-open { overflow: hidden; }
 /* Section bar: fixed frosted segmented toggle pill at top of screen on desktop and mobile.
    Appears smoothly when entering section content past the header. */
 .section-bar {
+  --section-bar-indicator-x: 0px;
+  --section-bar-indicator-width: 0px;
   display: flex;
   gap: 4px;
   position: fixed;
@@ -1028,15 +1040,47 @@ html.drawer-open { overflow: hidden; }
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   scrollbar-width: none;
+  isolation: isolate;
 }
 .section-bar.is-visible {
   opacity: 1;
   transform: translate(-50%, 0);
   pointer-events: auto;
 }
+/* Backdrop filtering forces WebKit to sample the changing Journey content
+   below the fixed bar every frame. An almost-opaque paper fill preserves the
+   control's appearance without the readback. */
+html.is-webkit-safari .section-bar {
+  background: rgba(235, 235, 235, 0.96);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 .section-bar::-webkit-scrollbar { display: none; }
+.section-bar::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: var(--section-bar-indicator-width);
+  border-radius: 999px;
+  background: var(--verge-ultraviolet);
+  box-shadow: 0 5px 12px rgba(50, 0, 155, 0.28);
+  opacity: 0;
+  transform: translate3d(var(--section-bar-indicator-x), 0, 0);
+  transition:
+    transform 340ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    width 340ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 160ms ease;
+  will-change: transform, width;
+  pointer-events: none;
+}
+.section-bar.has-active-indicator::before { opacity: 1; }
 
 .section-bar-tab {
+  position: relative;
+  z-index: 1;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -1049,17 +1093,20 @@ html.drawer-open { overflow: hidden; }
   padding: 9px 18px;
   border-radius: 999px;
   white-space: nowrap;
-  transition: color 200ms ease, background 200ms ease;
+  transition: color 220ms cubic-bezier(0.22, 0.61, 0.36, 1), background 180ms ease;
 }
 .section-bar-tab:hover:not(.is-active) {
   color: var(--primary-text);
   background: rgba(0, 0, 0, 0.04);
 }
 .section-bar-tab.is-active {
-  background: var(--verge-ultraviolet);
+  background: transparent;
   color: var(--hazard-white);
-  border-radius: 999px;
-  box-shadow: 0 5px 12px rgba(50, 0, 155, 0.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-bar::before,
+  .section-bar-tab { transition: none; }
 }
 
 @media (max-width: 650px) {
