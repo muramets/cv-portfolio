@@ -1,7 +1,7 @@
 // Rendering: data → DOM. Pure output, no admin chrome — admin.js decorates
 // rendered entities separately when admin mode is on.
 
-import { ENTITY_TYPES } from './entities.js?v=42';
+import { ENTITY_TYPES } from './entities.js?v=45';
 import { store, currentPage } from './store.js?v=42';
 import { SEED } from './content.js?v=42';
 

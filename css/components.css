@@ -18,12 +18,13 @@
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
+  box-shadow: 0 7px 16px rgba(19, 19, 19, 0.14);
   transition: background 180ms ease, box-shadow 180ms ease;
 }
 .btn-primary:hover {
   background: rgba(255, 255, 255, 0.20);
   color: var(--absolute-black);
-  box-shadow: 0 0 0 1px #c2c2c2;
+  box-shadow: 0 9px 20px rgba(19, 19, 19, 0.18), 0 0 0 1px #c2c2c2;
 }
 .btn-primary:active {
   background: rgba(140, 140, 140, 0.87);
@@ -83,10 +84,12 @@
   letter-spacing: 1.8px;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 150ms ease, background 150ms ease;
+  box-shadow: 0 4px 10px rgba(19, 19, 19, 0.12);
+  transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease;
 }
 .btn-tag:hover {
   transform: translateY(-1px);
+  box-shadow: 0 7px 14px rgba(19, 19, 19, 0.16);
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -101,8 +104,11 @@
 .story-tile {
   padding: 28px 32px;
   border-radius: var(--radius-tile);
-  border: 1px solid var(--hairline);
-  background: var(--canvas);
+  border: 1px solid transparent;
+  background-color: var(--canvas);
+  background-image: var(--paper-grain);
+  background-size: var(--paper-grain-size);
+  background-blend-mode: multiply;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -111,27 +117,39 @@
   transition: border-color 150ms ease;
 }
 
+/* Content wrapper lets focus scenes mask only typography while the card
+   surface itself is already visible. It preserves the original flex rhythm. */
+.story-tile__content {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: inherit;
+}
+
 .story-tile.featured {
   grid-column: span 2;
   border-radius: var(--radius-tile-featured);
 }
 
 /* Achievement tile hover: color only, no lift (getdesign §4) */
-.story-tile:hover { border-color: var(--hairline-dark); }
+.story-tile:hover { border-color: transparent; }
 .story-tile:hover .story-headline { color: var(--verge-ultraviolet); }
 
 /* Mint accent tile — inverts to black on hover */
 .story-tile.mint {
   background: var(--jelly-mint);
+  background-image: none;
+  box-shadow: 0 14px 30px rgba(19, 19, 19, 0.14);
   color: var(--absolute-black);
-  border-color: var(--console-mint-border);
+  border-color: transparent;
 }
 .story-tile.mint .story-headline { color: var(--absolute-black); }
 .story-tile.mint .story-kicker   { color: var(--absolute-black); opacity: 0.65; }
 .story-tile.mint .story-meta     { border-top-color: rgba(0, 0, 0, 0.12); }
 .story-tile.mint:hover {
   background: var(--absolute-black);
-  border-color: var(--absolute-black);
+  border-color: transparent;
   color: var(--hazard-white);
 }
 .story-tile.mint:hover .story-headline { color: var(--hazard-white); }
@@ -191,9 +209,39 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  border-left: 1px dashed rgba(61, 0, 191, 0.35); /* purple-rule */
   padding-left: 36px;
   margin-left: 8px;
+  position: relative;
+}
+
+/* A separate rail can dissolve exactly with the final visible role. A CSS
+   border cannot be faded independently, which is why it used to stop hard. */
+.timeline-list::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 1px;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(61, 0, 191, 0.35) 0 4px,
+    transparent 4px 8px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+.timeline-list.has-fade::before {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 var(--timeline-rail-fade-start),
+    transparent var(--timeline-rail-fade-end)
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 var(--timeline-rail-fade-start),
+    transparent var(--timeline-rail-fade-end)
+  );
 }
 
 .timeline-item {
@@ -283,6 +331,28 @@
   opacity: 0.5;
 }
 
+/* A one-time cue: the just-read card waits in ink as the timeline expands.
+   The first native hover removes this class, so its ordinary mint hover and
+   post-hover paper state remain completely unchanged. */
+@media (hover: hover) and (pointer: fine) {
+  .timeline-item.is-timeline-attention-pending:not(:hover) .timeline-body {
+    background: var(--absolute-black);
+    background-image: none;
+    color: var(--hazard-white);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
+  }
+  .timeline-item.is-timeline-attention-pending:not(:hover) .timeline-body .story-deck,
+  .timeline-item.is-timeline-attention-pending:not(:hover) .timeline-body .timeline-bullets li,
+  .timeline-item.is-timeline-attention-pending:not(:hover) .timeline-body .timeline-outro {
+    color: rgba(255, 255, 255, 0.80);
+    opacity: 1;
+  }
+  .timeline-item.is-timeline-attention-pending:not(:hover) .timeline-body .timeline-bullets li::before {
+    color: rgba(255, 255, 255, 0.65);
+    opacity: 1;
+  }
+}
+
 .timeline-company {
   font-family: var(--font-sans);
   font-size: 13px;
@@ -317,15 +387,21 @@
 .timeline-body {
   padding: 24px 28px;
   border-radius: var(--radius-tile-featured);
-  background: var(--surface-slate);
-  border: 1px solid var(--hairline);
+  background-color: var(--surface-slate);
+  background-image: var(--paper-grain);
+  background-size: var(--paper-grain-size);
+  background-blend-mode: multiply;
+  border: 1px solid transparent;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: background 200ms ease, border-color 200ms ease;
+  transition: background 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
 }
 
-.timeline-item:hover .timeline-body { border-color: var(--console-mint-border); }
+.timeline-item:hover .timeline-body {
+  border-color: transparent;
+  box-shadow: 0 14px 28px rgba(19, 19, 19, 0.14);
+}
 
 .timeline-bullets {
   display: flex;
@@ -352,26 +428,45 @@
   font-size: 12px;
 }
 
-/* Visitors see the three most recent roles; earlier ones sit behind
-   a fade and the "Earlier timeline" / "Another life" button (admin always sees all). */
-.timeline-list.has-fade { position: relative; }
-.timeline-list.has-fade::after {
-  content: '';
-  position: absolute;
-  left: -37px; /* cover the dashed rail too */
-  right: 0;
-  bottom: 0;
-  height: 140px;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), var(--canvas) 85%);
-  pointer-events: none;
-  z-index: 5;
+/* The final visible role itself dissolves into the page. This avoids a full
+   width white overlay below the list, which read as a hard horizontal seam. */
+/* The dot intentionally sits outside the item's grid box. Mask only the
+   card surface so the rail marker remains present while the copy dissolves. */
+.timeline-item.is-timeline-fading .timeline-body {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 29%,
+    rgba(0, 0, 0, 0.78) 46%,
+    rgba(0, 0, 0, 0.34) 72%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 29%,
+    rgba(0, 0, 0, 0.78) 46%,
+    rgba(0, 0, 0, 0.34) 72%,
+    transparent 100%
+  );
 }
 
 .timeline-expand {
-  display: block;
-  margin: 2px auto 0;
-  background: none;
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  /* It lives in normal document flow: its distance to the last card and the
+     end of Journey is now governed by the same page rhythm in both states. */
+  margin: 18px 0 0 calc(36px + 220px + 32px);
+  padding: 10px 18px;
+  background-color: var(--canvas);
+  background-image: var(--paper-grain);
+  background-size: var(--paper-grain-size);
+  background-blend-mode: multiply;
+  border: 1px solid rgba(19, 19, 19, 0.10);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 10px 24px rgba(19, 19, 19, 0.10);
   cursor: pointer;
   font-family: var(--font-mono);
   font-size: 12px;
@@ -379,12 +474,20 @@
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--secondary-text);
-  padding: 10px 24px;
-  transition: color 200ms ease, opacity 150ms cubic-bezier(0.4, 0, 0.2, 1), transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, opacity 150ms cubic-bezier(0.4, 0, 0.2, 1), transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   z-index: 6;
 }
-.timeline-expand:hover { color: var(--verge-ultraviolet); }
+.timeline-expand:hover {
+  color: var(--verge-ultraviolet);
+  border-color: rgba(82, 0, 255, 0.24);
+  box-shadow: 0 14px 30px rgba(19, 19, 19, 0.14);
+  transform: translateY(-2px);
+}
+.timeline-expand:focus-visible {
+  outline: 2px solid var(--verge-ultraviolet);
+  outline-offset: 3px;
+}
 
 /* Smooth ultraviolet cross-fade state during text morph */
 .timeline-expand.is-swapping {
@@ -398,7 +501,7 @@
 
 /* Cards arriving on "Earlier timeline" — soft rise, staggered via JS */
 .timeline-item.is-revealing {
-  animation: timeline-reveal 480ms ease backwards;
+  animation: timeline-reveal 640ms cubic-bezier(0.22, 0.86, 0.24, 1) backwards;
 }
 
 @keyframes timeline-reveal {
@@ -447,7 +550,10 @@
 }
 
 .form-input {
-  background: var(--canvas);
+  background-color: var(--canvas);
+  background-image: var(--paper-grain);
+  background-size: var(--paper-grain-size);
+  background-blend-mode: multiply;
   border: 1px solid var(--hairline-dark);
   border-radius: var(--radius-input);
   padding: 12px 14px;
@@ -566,6 +672,7 @@
   .tile-grid { grid-template-columns: 1fr; }
   .story-tile.featured { grid-column: span 1; }
   .timeline-item { grid-template-columns: 1fr; gap: 10px; }
+  .timeline-expand { margin-left: 0; }
   .form-stack { grid-template-columns: 1fr; }
   .form-field.full-width { grid-column: span 1; }
 }

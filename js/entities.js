@@ -32,7 +32,9 @@ function renderCard(entity) {
   const meta = el('span', 'story-meta', f.meta);
   meta.dataset.field = 'meta';
 
-  tile.append(kicker, headline, deck, meta);
+  const content = el('div', 'story-tile__content');
+  content.append(kicker, headline, deck, meta);
+  tile.append(content);
   return tile;
 }
 

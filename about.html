@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#131313">
   <title>Ilia Blinov — Head of Product Portfolio</title>
-  <link rel="stylesheet" href="css/tokens.css?v=42">
-  <link rel="stylesheet" href="css/base.css?v=42">
-  <link rel="stylesheet" href="css/layout.css?v=42">
-  <link rel="stylesheet" href="css/components.css?v=42">
-  <link rel="stylesheet" href="css/motion.css?v=42">
-  <link rel="stylesheet" href="css/admin.css?v=42">
-  <link rel="stylesheet" href="css/print.css?v=42" media="print">
+  <link rel="stylesheet" href="css/tokens.css?v=46">
+  <link rel="stylesheet" href="css/base.css?v=47">
+  <link rel="stylesheet" href="css/layout.css?v=93">
+  <link rel="stylesheet" href="css/components.css?v=60">
+  <link rel="stylesheet" href="css/motion.css?v=44">
+  <link rel="stylesheet" href="css/admin.css?v=44">
+  <link rel="stylesheet" href="css/print.css?v=44" media="print">
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
-  <script type="module" src="js/main.js?v=42" blocking="render"></script>
+  <script type="module" src="js/main.js?v=78" blocking="render"></script>
 </head>
-<body>
+<body class="page-about">
 
   <!-- HEADER — The Verge structure: nav top-right, wordmark hero below -->
   <header class="site-header" id="top">
@@ -64,30 +64,40 @@
   </header>
 
   <!-- ACHIEVEMENTS -->
-  <section class="section" id="achievements" data-block-id="achievements">
-    <div class="section-container">
-      <span class="section-ribbon" data-text-id="about.achievements.ribbon">Section 01 / Impact</span>
-      <h2 class="section-title" data-text-id="about.achievements.title">Key Achievements</h2>
-      <p class="section-subtitle" data-text-id="about.achievements.subtitle">Balanced story tiles outlining critical business milestones, revenue growth, and workflow automation.</p>
-
-      <div class="tile-grid"
-           data-collection="achievements"
-           data-entity-type="achievement"
-           data-add-label="+ Add Achievement"></div>
+  <section class="section section--impact" id="achievements" data-block-id="achievements">
+    <div class="scroll-chapter scroll-chapter--impact">
+      <div class="scroll-chapter__sticky">
+        <span class="scroll-chapter__shutter scroll-chapter__shutter--left" aria-hidden="true"></span>
+        <span class="scroll-chapter__shutter scroll-chapter__shutter--right" aria-hidden="true"></span>
+        <div class="section-container">
+          <div class="scroll-chapter__heading">
+            <span class="section-ribbon" data-text-id="about.achievements.ribbon">Section 01 / Impact</span>
+            <h2 class="section-title" data-text-id="about.achievements.title">Key Achievements</h2>
+            <p class="section-subtitle" data-text-id="about.achievements.subtitle">Balanced story tiles outlining critical business milestones, revenue growth, and workflow automation.</p>
+          </div>
+          <div class="tile-grid scroll-chapter__content"
+               data-collection="achievements"
+               data-entity-type="achievement"
+               data-add-label="+ Add Achievement"></div>
+        </div>
+      </div>
     </div>
   </section>
 
   <!-- EXPERIENCE -->
-  <section class="section" id="experience" data-block-id="experience">
-    <div class="section-container">
-      <span class="section-ribbon" data-text-id="about.experience.ribbon">Section 02 / Experience</span>
-      <h2 class="section-title" data-text-id="about.experience.title">Professional Journey</h2>
-      <p class="section-subtitle" data-text-id="about.experience.subtitle">Chronological record of roles in digital publishing and music distribution, pinned to a dashed rail.</p>
-
-      <div class="timeline-list"
-           data-collection="roles"
-           data-entity-type="role"
-           data-add-label="+ Add Role"></div>
+  <section class="section section--journey" id="experience" data-block-id="experience">
+    <div class="section-container journey-layout">
+      <div class="journey-layout__intro">
+          <span class="section-ribbon" data-text-id="about.experience.ribbon">Section 02 / Experience</span>
+          <h2 class="section-title" data-text-id="about.experience.title">Professional Journey</h2>
+          <p class="section-subtitle" data-text-id="about.experience.subtitle">Chronological record of roles in digital publishing and music distribution, pinned to a dashed rail.</p>
+      </div>
+      <div class="journey-layout__timeline">
+        <div class="timeline-list"
+             data-collection="roles"
+             data-entity-type="role"
+             data-add-label="+ Add Role"></div>
+      </div>
     </div>
   </section>
 

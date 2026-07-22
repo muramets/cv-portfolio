@@ -3,7 +3,10 @@
    nav top-right with / separators, wordmark hero block below.
 ───────────────────────────────────────────────────────── */
 .site-header {
-  background: var(--canvas);
+  background-color: var(--canvas);
+  background-image: var(--paper-grain);
+  background-size: var(--paper-grain-size);
+  background-blend-mode: multiply;
   border-bottom: 1px solid var(--hairline);
   padding: 0 var(--gutter);
 }
@@ -279,7 +282,10 @@
   transform: translateX(-50%);
   z-index: 10;
   white-space: nowrap;
-  background: var(--canvas);
+  background-color: var(--canvas);
+  background-image: var(--paper-grain);
+  background-size: var(--paper-grain-size);
+  background-blend-mode: multiply;
   border: none;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   padding: 5px 14px;
@@ -349,7 +355,10 @@
 ───────────────────────────────────────────────────────── */
 .section {
   padding: 72px var(--gutter);
-  background: var(--canvas);
+  background-color: var(--canvas);
+  background-image: var(--paper-grain);
+  background-size: var(--paper-grain-size);
+  background-blend-mode: multiply;
   border-bottom: 1px solid var(--hairline);
 }
 
@@ -391,6 +400,480 @@
   color: var(--secondary-text);
   margin-bottom: 48px;
   max-width: 720px;
+}
+
+/* About's focus scenes borrow Bodega's principle: keep one physical scroll
+   curve, but let a chapter spend distance on a sticky visual composition. */
+.scroll-chapter__shutter { display: none; }
+
+@property --impact-text-reveal {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: -50%;
+}
+
+@media (min-width: 901px) {
+  body.page-about:not(.is-admin) {
+    /* Shared lower edge for the sticky Impact composition and Journey's
+       timeline control: one deliberate gutter, never stacked whitespace. */
+    --about-content-edge: clamp(16px, 2.4svh, 32px);
+  }
+
+  body.page-about:not(.is-admin) .section--impact { padding: 0; }
+
+  body.page-about:not(.is-admin) .scroll-chapter--impact {
+    position: relative;
+    height: 270svh;
+    view-timeline-name: --impact-chapter;
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__sticky {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: clip;
+    isolation: isolate;
+    /* The scene uses the viewport for cards, not empty framing. */
+    padding: clamp(24px, 3vw, 40px) var(--gutter) var(--about-content-edge);
+    background-color: var(--surface-slate);
+    background-image: var(--paper-grain);
+    background-size: var(--paper-grain-size);
+    background-blend-mode: multiply;
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__sticky::before {
+    content: '';
+    position: absolute;
+    inset: 12% 8%;
+    z-index: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(60, 255, 208, 0.28), rgba(60, 255, 208, 0) 67%);
+  }
+
+  /* A temporary bottom fade lets the cards emerge through the same soft
+     threshold used by the Earlier Timeline, then clears once they settle. */
+  body.page-about:not(.is-admin) .scroll-chapter__sticky::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 3;
+    height: clamp(104px, 19svh, 210px);
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(to bottom, rgba(242, 242, 242, 0), var(--surface-slate) 85%);
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__sticky .section-container {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: start;
+    gap: 0;
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__heading {
+    position: relative;
+    grid-row: 1;
+    top: 0;
+    transform: none;
+    will-change: top, transform, opacity;
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__heading .section-ribbon { margin-bottom: 12px; }
+  body.page-about:not(.is-admin) .scroll-chapter__heading .section-title { margin-bottom: 12px; }
+  body.page-about:not(.is-admin) .scroll-chapter__heading .section-subtitle {
+    margin-bottom: clamp(16px, 2.4svh, 32px);
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__content {
+    position: relative;
+    grid-row: 2;
+    inset: auto;
+    min-height: 0;
+    /* Keep the air at the scene edges, never inside a card or between rows. */
+    grid-template-rows: repeat(3, max-content);
+    align-content: center;
+    margin-top: 0;
+    column-gap: 16px;
+    row-gap: 16px;
+    opacity: 1;
+    transform: none;
+    will-change: transform;
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__content .story-tile {
+    min-height: 0;
+    border-color: transparent;
+    scale: 1;
+    transition: scale 560ms cubic-bezier(0.22, 0.86, 0.24, 1), box-shadow 700ms cubic-bezier(0.22, 0.86, 0.24, 1), background-color 520ms cubic-bezier(0.22, 0.86, 0.24, 1), color 420ms cubic-bezier(0.22, 0.86, 0.24, 1);
+    will-change: clip-path, transform, scale;
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured.mint {
+    --impact-mint-text-surface: var(--jelly-mint);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    /* The featured card begins as an ink surface. Its first intentional hover
+       primes the colour; releasing that hover lets the mint surface emerge. */
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured.mint:not(.is-hover-primed) {
+      --impact-mint-text-surface: var(--absolute-black);
+      background: var(--absolute-black);
+      color: var(--hazard-white);
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured.mint:not(.is-hover-primed) .story-headline {
+      color: var(--hazard-white);
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured.mint:not(.is-hover-primed) .story-kicker {
+      color: rgba(255, 255, 255, 0.55);
+      opacity: 1;
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured.mint:not(.is-hover-primed) .story-deck {
+      color: rgba(255, 255, 255, 0.80);
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured.mint:not(.is-hover-primed) .story-meta {
+      color: rgba(255, 255, 255, 0.75);
+      border-top-color: rgba(255, 255, 255, 0.20);
+    }
+
+    /* Native hover stays live while the page moves; the class mirrors it when
+       a stationary pointer meets a card during a scroll-driven reveal. */
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile:is(:hover, .has-hover-intent, .is-hover-locked) {
+      border-color: transparent;
+      scale: 1.018;
+      box-shadow: 0 28px 64px rgba(19, 19, 19, 0.22), 0 8px 20px rgba(19, 19, 19, 0.10);
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile:is(:hover, .has-hover-intent, .is-hover-locked) .story-headline {
+      color: var(--verge-ultraviolet);
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:is(:hover, .has-hover-intent, .is-hover-locked) {
+      --impact-mint-text-surface: var(--absolute-black);
+      background: var(--absolute-black);
+      color: var(--hazard-white);
+      box-shadow: 0 30px 70px rgba(0, 0, 0, 0.34), 0 10px 24px rgba(0, 0, 0, 0.16);
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:is(:hover, .has-hover-intent, .is-hover-locked) .story-headline {
+      color: var(--hazard-white);
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:is(:hover, .has-hover-intent, .is-hover-locked) .story-kicker {
+      color: rgba(255, 255, 255, 0.55);
+      opacity: 1;
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:is(:hover, .has-hover-intent, .is-hover-locked) .story-deck {
+      color: rgba(255, 255, 255, 0.80);
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:is(:hover, .has-hover-intent, .is-hover-locked) .story-meta {
+      color: rgba(255, 255, 255, 0.75);
+      border-top-color: rgba(255, 255, 255, 0.20);
+    }
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__shutter {
+    position: absolute;
+    z-index: 4;
+    inset-block: 0;
+    display: block;
+    /* The ink door carries the wordmark. Giving it a deliberate majority
+       keeps the entire IMPACT word inside the black plane before the split. */
+    width: 62%;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__shutter::after {
+    position: absolute;
+    top: 50%;
+    font-family: var(--font-display);
+    font-size: clamp(96px, 15.8vw, 236px);
+    font-weight: 400;
+    line-height: 0.75;
+    /* Anton is naturally compact; a slight positive track keeps C and T
+       from touching while preserving the mass of the door wordmark. */
+    letter-spacing: 0.015em;
+    transform: translateY(-50%);
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__shutter--left {
+    left: 0;
+    color: rgba(255, 255, 255, 0.18);
+    background: var(--canvas-inverted);
+    /* The shadow stays attached to the moving slab, so depth is felt only
+       where a door has actually travelled. */
+    box-shadow: 24px 0 44px -18px rgba(0, 0, 0, 0.52);
+    transform: translateX(-106%);
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__shutter--left::after {
+    content: 'IMPACT';
+    /* Keep the visible T optically flush with the door seam without letting
+       its overhang cross into the revealed page beneath it. */
+    right: -0.025em;
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__shutter--right {
+    width: 38%;
+    right: 0;
+    color: rgba(0, 0, 0, 0.22);
+    background: var(--jelly-mint);
+    box-shadow: -24px 0 44px -18px rgba(0, 0, 0, 0.36);
+    transform: translateX(106%);
+  }
+
+  body.page-about:not(.is-admin) .scroll-chapter__shutter--right::after {
+    content: '01';
+    left: clamp(22px, 2.6vw, 48px);
+  }
+
+  body.page-about:not(.is-admin) .section--journey {
+    position: relative;
+    z-index: 6;
+    isolation: isolate;
+    /* Journey is a real page-layer: it reaches into Impact so the next
+       surface can be pulled up from below instead of waiting beneath it. */
+    margin-top: -48svh;
+    padding: clamp(88px, 10vw, 152px) var(--gutter) var(--about-content-edge);
+    background-color: var(--canvas);
+    background-image: var(--paper-grain);
+    background-size: var(--paper-grain-size);
+    background-blend-mode: multiply;
+    border-top: 1px solid rgba(19, 19, 19, 0.12);
+    box-shadow: 0 -28px 68px rgba(19, 19, 19, 0.16);
+    view-timeline-name: --journey-chapter;
+  }
+
+  body.page-about:not(.is-admin) .journey-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.55fr);
+    gap: clamp(40px, 6vw, 96px);
+    align-items: start;
+    position: relative;
+    z-index: 1;
+  }
+
+  body.page-about:not(.is-admin) .journey-layout__intro {
+    position: sticky;
+    top: clamp(32px, 9svh, 96px);
+  }
+
+  body.page-about:not(.is-admin) .journey-layout__intro .section-title {
+    font-size: clamp(52px, 5.2vw, 82px);
+  }
+
+  body.page-about:not(.is-admin) .journey-layout__timeline {
+    min-width: 0;
+  }
+
+  body.page-about:not(.is-admin) .journey-layout__timeline .timeline-list {
+    margin-left: 0;
+  }
+
+  @supports (animation-timeline: view()) {
+    body.page-about:not(.is-admin) .section--journey {
+      transform-origin: 50% 100%;
+      /* A resistant leading edge, then an increasingly willing pull — like
+         drawing a physical sheet across the previous page. */
+      animation: journey-sheet-settle 1s cubic-bezier(0.62, 0.02, 0.26, 1) both;
+      animation-timeline: --journey-chapter;
+      animation-range: entry 0% entry 68%;
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__shutter--left {
+      animation: impact-shutter-left 1s linear both;
+      animation-timeline: --impact-chapter;
+      animation-range: cover 0% cover 100%;
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__shutter--right {
+      animation: impact-shutter-right 1s linear both;
+      animation-timeline: --impact-chapter;
+      animation-range: cover 0% cover 100%;
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__heading {
+      animation: impact-heading-settle 1s linear both;
+      animation-timeline: --impact-chapter;
+      animation-range: cover 0% cover 100%;
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content {
+      animation: impact-content-follow 1s linear both;
+      animation-timeline: --impact-chapter;
+      animation-range: cover 0% cover 100%;
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__sticky::after {
+      animation: impact-bottom-fade 1s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+      animation-timeline: --impact-chapter;
+      animation-range: cover 26% cover 64%;
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile {
+      animation: impact-tile-unfold 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-timeline: --impact-chapter;
+      /* Cards are one body behind the doors, rather than a delayed queue. */
+      animation-range: cover 29% cover 62%;
+    }
+
+    /* The surface arrives first. Its typography resolves through a bottom
+       transparency gradient, so a card never reads as complete too early. */
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile__content {
+      -webkit-mask-image: linear-gradient(
+        to bottom,
+        #000 calc(var(--impact-text-reveal) - 16%),
+        rgba(0, 0, 0, 0.22) calc(var(--impact-text-reveal) + 12%),
+        transparent calc(var(--impact-text-reveal) + 36%)
+      );
+      mask-image: linear-gradient(
+        to bottom,
+        #000 calc(var(--impact-text-reveal) - 16%),
+        rgba(0, 0, 0, 0.22) calc(var(--impact-text-reveal) + 12%),
+        transparent calc(var(--impact-text-reveal) + 36%)
+      );
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      animation: impact-text-clarify 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-timeline: --impact-chapter;
+      animation-range: cover 29% cover 62%;
+    }
+
+    /* Chrome can occasionally flatten a child mask inside the featured card's
+       animated clip-path. This matching surface gradient guarantees the same
+       bottom-to-top text reveal for the mint card in that compositor path. */
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured.mint .story-tile__content {
+      position: relative;
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured.mint .story-tile__content::after {
+      content: '';
+      position: absolute;
+      z-index: 1;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(
+        to bottom,
+        transparent calc(var(--impact-text-reveal) - 16%),
+        color-mix(in srgb, var(--impact-mint-text-surface) 40%, transparent) calc(var(--impact-text-reveal) + 12%),
+        var(--impact-mint-text-surface) calc(var(--impact-text-reveal) + 36%)
+      );
+      animation: impact-text-clarify 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-timeline: --impact-chapter;
+      animation-range: cover 29% cover 62%;
+    }
+
+    body.page-about:not(.is-admin) .section--journey .journey-layout {
+      animation: journey-arrive 1s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+      animation-timeline: --journey-chapter;
+      animation-range: entry 0% entry 34%;
+    }
+
+  }
+
+  @supports not (animation-timeline: view()) {
+    body.page-about:not(.is-admin) .scroll-chapter__heading {
+      position: relative;
+      inset: auto;
+      transform: none;
+    }
+
+    body.page-about:not(.is-admin) .scroll-chapter__content {
+      position: relative;
+      inset: auto;
+      margin-top: 48px;
+    }
+  }
+}
+
+@keyframes impact-shutter-left {
+  /* A single unbroken Bézier: the door starts moving immediately but gains
+     speed gently, with no mechanical catch between a "give" and an opening. */
+  0%, 27% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  }
+  64%, 100% { transform: translateX(-106%); }
+}
+
+@keyframes impact-shutter-right {
+  0%, 27% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  }
+  64%, 100% { transform: translateX(106%); }
+}
+
+@keyframes impact-heading-settle {
+  /* The heading begins at the visual centre of the viewport. It rises with
+     the opening, instead of dropping in from the top of the composition. */
+  0%, 26% {
+    opacity: 0;
+    transform: translateY(calc(50svh - 50% - clamp(24px, 3vw, 40px)));
+    animation-timing-function: cubic-bezier(0.33, 0, 0.55, 0.52);
+  }
+  38% {
+    opacity: 0.7;
+    transform: translateY(calc(38svh - 50% - clamp(24px, 3vw, 40px)));
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  64%, 100% { opacity: 1; transform: none; }
+}
+
+@keyframes impact-content-follow {
+  /* This is the heading's wake: its first cards sit just beneath the title
+     at the centre, then the whole grid settles into its final architecture. */
+  0%, 26% {
+    transform: translateY(calc(50svh - clamp(76px, 10svh, 124px)));
+    animation-timing-function: cubic-bezier(0.33, 0, 0.55, 0.52);
+  }
+  38% {
+    transform: translateY(calc(34svh - clamp(54px, 7svh, 88px)));
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  64%, 100% { transform: none; }
+}
+
+@keyframes impact-bottom-fade {
+  0%, 22% { opacity: 1; }
+  72%, 100% { opacity: 0; }
+}
+
+@keyframes journey-arrive {
+  from { opacity: 0; transform: translateY(6svh); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes journey-sheet-settle {
+  from { transform: perspective(1800px) rotateX(4deg); }
+  to { transform: none; }
+}
+
+@keyframes impact-tile-unfold {
+  from {
+    clip-path: inset(0 0 100% 0 round var(--radius-tile));
+    transform: translateY(18px);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round var(--radius-tile));
+    transform: none;
+  }
+}
+
+@keyframes impact-text-clarify {
+  from { --impact-text-reveal: -50%; }
+  to { --impact-text-reveal: 150%; }
 }
 
 /* Empty state on stub pages */
@@ -599,6 +1082,7 @@ html.drawer-open { overflow: hidden; }
   background: var(--verge-ultraviolet);
   color: var(--hazard-white);
   border-radius: 999px;
+  box-shadow: 0 5px 12px rgba(50, 0, 155, 0.28);
 }
 
 @media (max-width: 650px) {
@@ -743,4 +1227,50 @@ html.drawer-open { overflow: hidden; }
   .nav-drawer,
   .nav-overlay,
   .nav-drawer .drawer-link { transition: none; }
+  body.page-about:not(.is-admin) .scroll-chapter--impact { height: auto; }
+  body.page-about:not(.is-admin) .scroll-chapter__sticky { position: relative; height: auto; padding: 0; }
+  body.page-about:not(.is-admin) .scroll-chapter__shutter { display: none; }
+  body.page-about:not(.is-admin) .scroll-chapter__sticky .section-container { height: auto; }
+  body.page-about:not(.is-admin) .scroll-chapter__heading,
+  body.page-about:not(.is-admin) .scroll-chapter__content {
+    position: relative;
+    inset: auto;
+    opacity: 1;
+    transform: none;
+  }
+  body.page-about:not(.is-admin) .scroll-chapter__content .story-tile__content {
+    -webkit-mask-image: none;
+    mask-image: none;
+    animation: none;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 780px) {
+  body.page-about:not(.is-admin) .scroll-chapter__sticky { padding-block: 20px 16px; }
+  body.page-about:not(.is-admin) .scroll-chapter__content {
+    column-gap: 10px;
+    row-gap: 12px;
+  }
+  body.page-about:not(.is-admin) .scroll-chapter__content .story-tile { padding: 16px 20px; gap: 8px; }
+  body.page-about:not(.is-admin) .scroll-chapter__content .story-headline { font-size: clamp(18px, 1.7vw, 22px); }
+  body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured .story-headline { font-size: clamp(24px, 2.2vw, 29px); }
+  body.page-about:not(.is-admin) .scroll-chapter__content .story-kicker {
+    font-size: 9px;
+    letter-spacing: 1.3px;
+  }
+  body.page-about:not(.is-admin) .scroll-chapter__content .story-meta {
+    padding-top: 6px;
+    font-size: 9px;
+    line-height: 1.1;
+    letter-spacing: 1.2px;
+    white-space: nowrap;
+  }
+  body.page-about:not(.is-admin) .scroll-chapter__content .story-deck {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
 }

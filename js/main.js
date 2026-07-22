@@ -3,7 +3,13 @@
 
 import { initAuth, isAdmin, login, logout } from './auth.js?v=42';
 import { initStore } from './store.js?v=42';
-import { renderPage, applyTexts, applyBlockOrder, applyFooterColOrder, pruneEmptyNav } from './render.js?v=42';
+import { renderPage, applyTexts, applyBlockOrder, applyFooterColOrder, pruneEmptyNav } from './render.js?v=45';
+
+let lenisInstance = null;
+const ANCHOR_SCROLL_DURATION = 1.28;
+// Zero velocity at both ends: an anchor is approached and released rather
+// than caught. It keeps long travel fluid without a hard arrival frame.
+const anchorScrollEasing = t => 0.5 - Math.cos(Math.PI * t) / 2;
 
 // Cold load has no inbound view transition (nothing to morph from) —
 // give it a one-time entrance fade instead. Navigations between pages
@@ -42,7 +48,8 @@ initSectionBar();
 placeStatusForMobile();
 placeKickerInNav();
 initLinkedInModal();
-initLenisScroll();
+const scrollInteraction = initScrollInteractionFeedback();
+initLenisScroll(scrollInteraction);
 
 function initLinkedInModal() {
   let overlay = null;
@@ -209,6 +216,25 @@ function initSectionBar() {
   bar.setAttribute('aria-label', 'Page sections');
 
   const tabs = new Map();
+  const getSectionViewportTarget = section => {
+    const floatingInset = Math.max(96, (bar.offsetHeight || 0) + 28);
+
+    if (section.id === 'achievements') {
+      const chapter = section.querySelector('.scroll-chapter--impact');
+      if (chapter) {
+        const chapterTop = window.scrollY + chapter.getBoundingClientRect().top;
+        // This is the full-viewport, closed-door frame used by Impact itself.
+        return Math.max(0, chapterTop - window.innerHeight
+          + (chapter.offsetHeight + window.innerHeight) * 0.27);
+      }
+    }
+
+    const focus = section.id === 'experience'
+      ? section.querySelector('.timeline-item')
+      : section.querySelector('.section-title') || section;
+    return Math.max(0, window.scrollY + focus.getBoundingClientRect().top - floatingInset);
+  };
+
   sections.forEach(section => {
     const label = section.querySelector('.section-ribbon')
       ?.textContent.split('/').pop().trim() || section.dataset.blockId;
@@ -216,24 +242,35 @@ function initSectionBar() {
     tab.type = 'button';
     tab.className = 'section-bar-tab';
     tab.textContent = label;
-    tab.addEventListener('click', () =>
-      section.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' }));
+    tab.addEventListener('click', () => {
+      const target = getSectionViewportTarget(section);
+      if (reduced) {
+        window.scrollTo({ top: target, behavior: 'auto' });
+      } else if (lenisInstance) {
+        lenisInstance.scrollTo(target, {
+          duration: ANCHOR_SCROLL_DURATION,
+          easing: anchorScrollEasing,
+        });
+      } else {
+        window.scrollTo({ top: target, behavior: 'smooth' });
+      }
+    });
     tabs.set(section, tab);
     bar.append(tab);
   });
 
   document.body.append(bar);
 
-  // Show floating bar reliably whenever scroll passes the site header into section content
+  // IntersectionObserver makes the bar appear after the header without a
+  // scroll listener or layout read on every animation frame.
   const header = document.querySelector('.site-header');
-  const checkVisibility = () => {
-    const headerThreshold = (header?.offsetHeight || 180) - 50;
-    const isPastHeader = window.scrollY > headerThreshold;
-    bar.classList.toggle('is-visible', isPastHeader);
-  };
-
-  window.addEventListener('scroll', checkVisibility, { passive: true });
-  checkVisibility();
+  if (header) {
+    const headerObserver = new IntersectionObserver(([entry]) => {
+      const isPastHeader = !entry.isIntersecting && entry.boundingClientRect.bottom <= 50;
+      bar.classList.toggle('is-visible', isPastHeader);
+    }, { rootMargin: '-50px 0px 0px', threshold: 0 });
+    headerObserver.observe(header);
+  }
 
   const spy = new IntersectionObserver(entries => {
     entries.forEach(entry => {
@@ -251,24 +288,298 @@ if ('scrollRestoration' in history) {
   history.scrollRestoration = 'manual';
 }
 
-// Smooth scroll handler for anchor links
-let lenisInstance = null;
+/* Cards remain genuinely live during a scroll. When the composition travels
+   beneath a resting cursor, hit-testing promotes whichever tile reaches that
+   point — exactly like direct hover, with no invented "intent" gate. */
+function initScrollInteractionFeedback() {
+  let lastPointer = null;
+  let hoveredTile = null;
+  let hoverFrame = null;
+  const impactChapter = document.querySelector('.scroll-chapter--impact');
+  let lastScrollY = window.scrollY;
+  let scrollDirection = 0;
+  let lastScrollAt = 0;
 
-function initLenisScroll() {
-  if (typeof Lenis === 'undefined') return;
+  const getImpactProgress = () => {
+    if (!impactChapter) return null;
+    const chapterTop = window.scrollY + impactChapter.getBoundingClientRect().top;
+    return (window.scrollY - (chapterTop - window.innerHeight))
+      / (impactChapter.offsetHeight + window.innerHeight);
+  };
+
+  const releaseLockedFeaturedHover = () => {
+    const featured = document.querySelector('.scroll-chapter__content .story-tile.featured.mint.is-hover-locked');
+    if (!featured) return;
+
+    const progress = getImpactProgress();
+    if (progress === null) return;
+    // The retained visual belongs to the closing pass only. A fully closed
+    // door resets it; a new forward pass returns control to normal hover.
+    if (progress <= 0.20 || (scrollDirection > 0 && progress > 0.20)) {
+      featured.classList.remove('is-hover-locked');
+    }
+  };
+
+  const resetFeaturedHoverAtClosedDoors = () => {
+    const progress = getImpactProgress();
+    if (progress === null || progress > 0.272) return;
+
+    const featured = document.querySelector('.scroll-chapter__content .story-tile.featured.mint');
+    if (!featured) return;
+    featured.classList.remove('is-hover-primed', 'is-hover-locked', 'has-hover-intent');
+    if (hoveredTile === featured) hoveredTile = null;
+  };
+
+  const lockFeaturedHoverWhileClosing = tile => {
+    if (!tile?.matches('.featured.mint.is-hover-primed')) return;
+    if (scrollDirection >= 0 || performance.now() - lastScrollAt > 140) return;
+
+    const progress = getImpactProgress();
+    if (progress !== null && progress > 0.20) tile.classList.add('is-hover-locked');
+  };
+
+  const activateCardHover = tile => {
+    if (!tile) return;
+    tile.classList.add('has-hover-intent');
+    if (tile.matches('.featured.mint')) tile.classList.add('is-hover-primed');
+  };
+
+  const syncHoverAtPointer = () => {
+    hoverFrame = null;
+    const target = lastPointer && document.elementFromPoint(lastPointer.x, lastPointer.y);
+    // :hover is evaluated by the browser even when content scrolls under a
+    // completely still cursor, so it also covers the first card encounter.
+    const nextTile = target?.closest('.story-tile')
+      ?? document.querySelector('.scroll-chapter__content .story-tile:hover');
+    if (hoveredTile && hoveredTile !== nextTile) {
+      lockFeaturedHoverWhileClosing(hoveredTile);
+      hoveredTile.classList.remove('has-hover-intent');
+    }
+    if (nextTile) activateCardHover(nextTile);
+    hoveredTile = nextTile;
+  };
+
+  const requestHoverSync = () => {
+    if (hoverFrame !== null) return;
+    hoverFrame = requestAnimationFrame(syncHoverAtPointer);
+  };
+
+  const isFinePointer = event => event.pointerType === 'mouse' || event.pointerType === 'pen';
+
+  document.addEventListener('pointermove', event => {
+    if (!isFinePointer(event)) return;
+    lastPointer = { x: event.clientX, y: event.clientY };
+    requestHoverSync();
+  }, { passive: true });
+
+  document.addEventListener('pointerover', event => {
+    if (!isFinePointer(event)) return;
+    lastPointer = { x: event.clientX, y: event.clientY };
+    requestHoverSync();
+  });
+
+  document.addEventListener('pointerout', event => {
+    const tile = event.target.closest('.story-tile');
+    if (!tile || tile.contains(event.relatedTarget)) return;
+    lockFeaturedHoverWhileClosing(tile);
+    tile.classList.remove('has-hover-intent');
+    if (hoveredTile === tile) hoveredTile = null;
+  });
+
+  // Scrolling does not suppress hover: the card arriving below a stationary
+  // cursor is intentionally allowed to become the active card.
+  window.addEventListener('scroll', () => {
+    const current = window.scrollY;
+    if (Math.abs(current - lastScrollY) > 0.5) {
+      scrollDirection = current > lastScrollY ? 1 : -1;
+      lastScrollAt = performance.now();
+    }
+    lastScrollY = current;
+    releaseLockedFeaturedHover();
+    resetFeaturedHoverAtClosedDoors();
+    requestHoverSync();
+  }, { passive: true });
+
+  return { sync: requestHoverSync };
+}
+
+/* One physical scroll curve for the whole site. About's emphasis comes from
+   sticky scroll scenes in CSS, not from altering the user's wheel input. */
+function initLenisScroll(scrollFeedback) {
+  const hasFinePointer = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (typeof Lenis === 'undefined' || !hasFinePointer) return;
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   lenisInstance = new Lenis({
     autoRaf: true,
-    lerp: 0.08,
+    // A modest safety buffer keeps scroll-driven scenes legible when a fast
+    // trackpad burst would otherwise leap over several animation frames.
+    lerp: 0.085,
     smoothWheel: true,
-    wheelMultiplier: 0.9,
-    smoothTouch: false,
+    wheelMultiplier: 0.92,
     syncTouch: false,
+    overscroll: false,
   });
+
+  lenisInstance.on('scroll', () => scrollFeedback.sync());
 }
 
-// Smooth scroll handler for anchor links with Lenis integration
+/* One deliberate downward impulse is enough for Impact: once the door has
+   begun opening, the scene gently carries itself through the card arrival.
+   The reverse pass remains a small, local magnetic finish near the landing. */
+function initImpactSoftSettle() {
+  const chapter = document.querySelector('.scroll-chapter--impact');
+  const hasFinePointer = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (!chapter || !hasFinePointer || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const openSettledProgress = 0.64;
+  const closedSettledProgress = 0.27;
+  const releaseProgress = 0.90;
+  const forwardAutofinishProgress = 0.275;
+  const reverseAutofinishProgress = 0.59;
+  let restTimer = null;
+  let hasSettled = false;
+  let isSettling = false;
+  let activeSettle = null;
+  let carryForward = false;
+  let lastScrollY = window.scrollY;
+  let lastDirection = 0;
+
+  const getProgressTarget = progress => {
+    const chapterTop = window.scrollY + chapter.getBoundingClientRect().top;
+    const chapterHeight = chapter.offsetHeight;
+    return chapterTop - window.innerHeight + (chapterHeight + window.innerHeight) * progress;
+  };
+
+  const getChapterProgress = () => {
+    const chapterTop = window.scrollY + chapter.getBoundingClientRect().top;
+    return (window.scrollY - (chapterTop - window.innerHeight))
+      / (chapter.offsetHeight + window.innerHeight);
+  };
+
+  const releaseFromImpact = () => {
+    const target = getProgressTarget(releaseProgress);
+    isSettling = true;
+    activeSettle = 'release';
+    const complete = () => {
+      isSettling = false;
+      activeSettle = null;
+      hasSettled = false;
+      carryForward = false;
+      document.body.classList.remove('is-impact-releasing');
+    };
+
+    if (lenisInstance) {
+      lenisInstance.scrollTo(target, {
+        duration: 1.08,
+        easing: anchorScrollEasing,
+        onComplete: complete,
+      });
+    } else {
+      window.scrollTo({ top: target, behavior: 'smooth' });
+      window.setTimeout(complete, 820);
+    }
+  };
+
+  const finishReveal = () => {
+    restTimer = null;
+    if (isSettling) return;
+
+    const current = window.scrollY;
+    const threshold = Math.min(120, Math.max(56, window.innerHeight * 0.08));
+    const progress = getChapterProgress();
+    const targetProgress = lastDirection < 0 ? closedSettledProgress : openSettledProgress;
+    const target = getProgressTarget(targetProgress);
+
+    const approachingDown = lastDirection > 0
+      && progress >= forwardAutofinishProgress
+      && progress < openSettledProgress
+      && current < target - 2;
+    const approachingUp = lastDirection < 0
+      && progress <= reverseAutofinishProgress
+      && progress > closedSettledProgress
+      && current > target + 2;
+
+    if (!approachingDown && !approachingUp) {
+      if (Math.abs(current - target) > threshold * 1.6) hasSettled = false;
+      return;
+    }
+
+    isSettling = true;
+    hasSettled = true;
+    activeSettle = targetProgress === openSettledProgress ? 'open' : 'close';
+    const complete = () => {
+      const shouldRelease = activeSettle === 'open' && carryForward;
+      isSettling = false;
+      activeSettle = null;
+      if (shouldRelease) releaseFromImpact();
+    };
+    const remainingViewports = Math.abs(target - current) / window.innerHeight;
+    const duration = Math.min(1.2, Math.max(0.72, 0.72 + remainingViewports * 0.35));
+
+    if (lenisInstance) {
+      lenisInstance.scrollTo(target, {
+        duration,
+        easing: anchorScrollEasing,
+        onComplete: complete,
+      });
+    } else {
+      window.scrollTo({ top: target, behavior: 'smooth' });
+      window.setTimeout(complete, 460);
+    }
+  };
+
+  const considerSettle = () => {
+    const current = window.scrollY;
+    if (Math.abs(current - lastScrollY) > 0.5) {
+      lastDirection = current > lastScrollY ? 1 : -1;
+    }
+    lastScrollY = current;
+
+    const target = getProgressTarget(lastDirection < 0 ? closedSettledProgress : openSettledProgress);
+    const threshold = Math.min(120, Math.max(56, window.innerHeight * 0.08));
+    if (hasSettled && Math.abs(current - target) > threshold * 1.6) hasSettled = false;
+    if (hasSettled && !isSettling) return;
+    window.clearTimeout(restTimer);
+    restTimer = window.setTimeout(finishReveal, 120);
+  };
+
+  // A continuing forward gesture is carried through the open door and out of
+  // the sticky scene. Any other new input returns control immediately.
+  const releaseToUser = event => {
+    const isForwardWheel = event?.type === 'wheel' && event.deltaY > 0;
+    const isForwardKey = event?.type === 'keydown'
+      && ['ArrowDown', 'PageDown', 'End', ' '].includes(event.key);
+    const continuesForward = isForwardWheel || isForwardKey;
+    const progress = getChapterProgress();
+    const isAtOpenLanding = hasSettled
+      && progress >= openSettledProgress - 0.02
+      && progress <= openSettledProgress + 0.04;
+
+    if (isSettling && activeSettle === 'release' && continuesForward) return;
+
+    if ((isSettling && activeSettle === 'open' && continuesForward) || (continuesForward && isAtOpenLanding)) {
+      carryForward = true;
+      document.body.classList.add('is-impact-releasing');
+      if (!isSettling) releaseFromImpact();
+      return;
+    }
+
+    isSettling = false;
+    activeSettle = null;
+    carryForward = false;
+    hasSettled = false;
+    document.body.classList.remove('is-impact-releasing');
+    window.clearTimeout(restTimer);
+  };
+
+  window.addEventListener('scroll', considerSettle, { passive: true });
+  window.addEventListener('wheel', releaseToUser, { passive: true });
+  window.addEventListener('touchstart', releaseToUser, { passive: true });
+  document.addEventListener('keydown', releaseToUser);
+}
+
+// Smooth anchor travel uses the same motion system as desktop direct manipulation.
 document.addEventListener('click', e => {
   if (e.target.closest('.external-modal')) return;
   const anchor = e.target.closest('a[href^="#"]');
@@ -278,7 +589,10 @@ document.addEventListener('click', e => {
   if (targetId === 'top') {
     e.preventDefault();
     if (lenisInstance) {
-      lenisInstance.scrollTo(0, { duration: 1.2 });
+      lenisInstance.scrollTo(0, {
+        duration: ANCHOR_SCROLL_DURATION,
+        easing: anchorScrollEasing,
+      });
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -288,9 +602,13 @@ document.addEventListener('click', e => {
   if (targetEl) {
     e.preventDefault();
     if (lenisInstance) {
-      lenisInstance.scrollTo(targetEl, { duration: 1.2, offset: -24 });
+      lenisInstance.scrollTo(targetEl, {
+        duration: ANCHOR_SCROLL_DURATION,
+        easing: anchorScrollEasing,
+        offset: -24,
+      });
     } else {
-      targetEl.scrollIntoView({ behavior: 'smooth' });
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     history.pushState(null, '', `#${targetId}`);
   }
@@ -307,16 +625,92 @@ function initTimelineCollapse() {
   if (!list || items.length <= 3) return;
 
   let visibleCount = 3;
+  const timelineMotionMs = 680;
+  const timelineMotionEasing = t => {
+    // Exact JS counterpart of cubic-bezier(.37, 0, .63, 1), used below by
+    // Lenis so document travel and the list's height share one trajectory.
+    let lower = 0;
+    let upper = 1;
+    let curveT = t;
+    for (let i = 0; i < 12; i++) {
+      curveT = (lower + upper) / 2;
+      const inverse = 1 - curveT;
+      const x = 3 * inverse * inverse * curveT * 0.37
+        + 3 * inverse * curveT * curveT * 0.63
+        + curveT * curveT * curveT;
+      if (x < t) lower = curveT;
+      else upper = curveT;
+    }
+    const inverse = 1 - curveT;
+    return 3 * inverse * curveT * curveT + curveT * curveT * curveT;
+  };
+  const returnCueListeners = new Map();
+
+  function clearTimelineReturnCue(role, resetVisual = false) {
+    const activate = returnCueListeners.get(role);
+    if (activate) role.removeEventListener('pointerenter', activate);
+    returnCueListeners.delete(role);
+    if (resetVisual) role.classList.remove('is-timeline-attention-pending');
+  }
+
+  function setTimelineReturnCue(role) {
+    // There is one immediate reminder: the just-read card becomes the black
+    // context marker as the timeline brings the next roles into view.
+    items.forEach(item => clearTimelineReturnCue(item, true));
+    if (!role) return;
+
+    role.classList.add('is-timeline-attention-pending');
+    const activate = () => {
+      role.classList.remove('is-timeline-attention-pending');
+      returnCueListeners.delete(role);
+    };
+    returnCueListeners.set(role, activate);
+    role.addEventListener('pointerenter', activate, { once: true });
+  }
+
+  function updateRailFade(fadingRole) {
+    if (!fadingRole) {
+      list.style.removeProperty('--timeline-rail-fade-start');
+      list.style.removeProperty('--timeline-rail-fade-end');
+      return;
+    }
+
+    const listTop = list.getBoundingClientRect().top;
+    const roleRect = fadingRole.getBoundingClientRect();
+    const bullets = fadingRole.querySelector('.timeline-bullets');
+    const bulletsTop = bullets?.getBoundingClientRect().top ?? roleRect.top + roleRect.height * 0.29;
+    const fadeStart = Math.max(0, Math.round(bulletsTop - listTop));
+    const fadeEnd = Math.max(fadeStart + 1, Math.round(roleRect.bottom - listTop));
+
+    list.style.setProperty('--timeline-rail-fade-start', fadeStart + 'px');
+    list.style.setProperty('--timeline-rail-fade-end', fadeEnd + 'px');
+  }
+
+  function setFadingRole(count = visibleCount) {
+    const fadingIndex = count < items.length ? count - 1 : -1;
+    const fadingRole = items[fadingIndex] || null;
+    items.forEach((item, index) => {
+      item.classList.toggle('is-timeline-fading', index === fadingIndex);
+    });
+    updateRailFade(fadingRole);
+  }
 
   function updateVisibility() {
     items.forEach((item, index) => {
       item.style.display = index < visibleCount ? '' : 'none';
     });
     list.classList.toggle('has-fade', visibleCount < items.length);
+    setFadingRole();
   }
 
   // Initial state: show first 3 items with bottom fade
   updateVisibility();
+
+  window.addEventListener('resize', () => {
+    window.requestAnimationFrame(() => {
+      setFadingRole();
+    });
+  }, { passive: true });
 
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -325,6 +719,19 @@ function initTimelineCollapse() {
   list.after(btn);
 
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let isTimelineAnimating = false;
+
+  const scrollWithTimeline = (target, { duration = 0.82, easing = anchorScrollEasing } = {}) => {
+    if (Math.abs(target - window.scrollY) <= 2) return;
+    if (lenisInstance) {
+      lenisInstance.scrollTo(target, {
+        duration,
+        easing,
+      });
+    } else {
+      window.scrollTo({ top: target, behavior: 'smooth' });
+    }
+  };
 
   function getButtonText(count) {
     if (count >= items.length) return 'Recent only ↑';
@@ -349,14 +756,23 @@ function initTimelineCollapse() {
     list.style.height = from + 'px';
     list.style.overflow = 'hidden';
     void list.offsetHeight; // flush, so the next height change transitions
-    list.style.transition = 'height 500ms cubic-bezier(0.4, 0, 0.2, 1)';
+    list.style.transition = `height ${timelineMotionMs}ms cubic-bezier(0.37, 0, 0.63, 1)`;
     list.style.height = to + 'px';
-    list.addEventListener('transitionend', function clear(e) {
+    let complete = false;
+    const clear = e => {
       if (e.propertyName !== 'height') return;
+      if (complete) return;
+      complete = true;
       list.removeEventListener('transitionend', clear);
-      list.style.height = list.style.overflow = list.style.transition = '';
+      window.clearTimeout(fallback);
+      // Collapse hides the surplus items while the final height is still
+      // held. Releasing the height first briefly restores the full list and
+      // produces a second, visible page movement.
       done?.();
-    });
+      list.style.height = list.style.overflow = list.style.transition = '';
+    };
+    const fallback = window.setTimeout(() => clear({ propertyName: 'height' }), timelineMotionMs + 80);
+    list.addEventListener('transitionend', clear);
   }
 
   function expandNext() {
@@ -364,25 +780,25 @@ function initTimelineCollapse() {
     const prevCount = visibleCount;
     visibleCount = Math.min(items.length, visibleCount + 3);
 
-    const FADE_H = 140; // keep in sync with .timeline-list.has-fade::after
-    const unseenTopViewport = list.getBoundingClientRect().bottom - FADE_H;
-
     for (let i = prevCount; i < visibleCount; i++) {
       if (items[i]) items[i].style.display = '';
     }
     list.classList.toggle('has-fade', visibleCount < items.length);
+    setFadingRole();
 
     const to = list.offsetHeight;
 
     if (!reduced) {
+      isTimelineAnimating = true;
       document.documentElement.style.overflowAnchor = 'none';
 
-      const startScrollY = window.scrollY;
-      const targetScrollY = Math.max(0, startScrollY + unseenTopViewport - 100);
-
-      const duration = 500;
-      const startTime = performance.now();
-      list.style.overflow = 'hidden';
+      // Preserve one read role above the new material. The last visible card
+      // becomes the top anchor, so the user keeps context before the newly
+      // revealed cards enter beneath it.
+      const contextRole = items[Math.max(0, prevCount - 1)];
+      const contextRoleTop = contextRole?.getBoundingClientRect().top
+        ?? list.getBoundingClientRect().bottom;
+      const targetScrollY = Math.max(0, window.scrollY + contextRoleTop - 76);
 
       for (let i = prevCount; i < visibleCount; i++) {
         const item = items[i];
@@ -395,33 +811,19 @@ function initTimelineCollapse() {
         }, { once: true });
       }
 
-      function animate(now) {
-        const elapsed = now - startTime;
-        const progress = Math.min(1, elapsed / duration);
-        const ease = 1 - Math.pow(1 - progress, 3);
-
-        const currentH = from + (to - from) * ease;
-        list.style.height = currentH + 'px';
-
-        if (Math.abs(targetScrollY - startScrollY) > 2) {
-          window.scrollTo(0, startScrollY + (targetScrollY - startScrollY) * ease);
-        }
-
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          list.style.height = list.style.overflow = '';
-          document.documentElement.style.overflowAnchor = '';
-        }
-      }
-
-      requestAnimationFrame(animate);
+      runHeight(from, to, () => {
+        document.documentElement.style.overflowAnchor = '';
+        isTimelineAnimating = false;
+      });
+      setTimelineReturnCue(contextRole);
+      scrollWithTimeline(targetScrollY);
     }
 
     swapButtonText(getButtonText(visibleCount));
   }
 
   function collapseToRecent() {
+    items.forEach(item => clearTimelineReturnCue(item, true));
     const from = list.offsetHeight;
     const thirdItem = items[2];
 
@@ -430,6 +832,7 @@ function initTimelineCollapse() {
     const to = Math.round(thirdRect.bottom - listRect.top);
 
     list.classList.add('has-fade');
+    setFadingRole(3);
     swapButtonText(getButtonText(3));
 
     const contactEl = document.getElementById('contact');
@@ -442,45 +845,36 @@ function initTimelineCollapse() {
     }
 
     document.documentElement.style.overflowAnchor = 'none';
+    isTimelineAnimating = true;
 
+    // Contact will rise by exactly this much as the list closes. Calculate its
+    // final document position before either animation starts, then move both
+    // the viewport and the list along the same curve.
     const startScrollY = window.scrollY;
     const deltaH = from - to;
-
-    const contactRect = contactEl ? contactEl.getBoundingClientRect() : null;
+    const floatingBar = document.querySelector('.section-bar.is-visible');
+    const inset = floatingBar
+      ? floatingBar.getBoundingClientRect().bottom + 24
+      : 32;
+    const contactRect = contactEl?.getBoundingClientRect();
     const targetScrollY = contactRect
-      ? Math.max(0, startScrollY + contactRect.top - deltaH - 40)
+      ? Math.max(0, startScrollY + contactRect.top - deltaH - inset)
       : startScrollY;
 
-    const duration = 500;
-    const startTime = performance.now();
-    list.style.overflow = 'hidden';
-
-    function animate(now) {
-      const elapsed = now - startTime;
-      const progress = Math.min(1, elapsed / duration);
-      const ease = 1 - Math.pow(1 - progress, 3);
-
-      const currentH = from + (to - from) * ease;
-      list.style.height = currentH + 'px';
-
-      if (Math.abs(targetScrollY - startScrollY) > 2) {
-        window.scrollTo(0, startScrollY + (targetScrollY - startScrollY) * ease);
-      }
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        visibleCount = 3;
-        updateVisibility();
-        list.style.height = list.style.overflow = '';
-        document.documentElement.style.overflowAnchor = '';
-      }
-    }
-
-    requestAnimationFrame(animate);
+    runHeight(from, to, () => {
+      visibleCount = 3;
+      updateVisibility();
+      document.documentElement.style.overflowAnchor = '';
+      isTimelineAnimating = false;
+    });
+    scrollWithTimeline(targetScrollY, {
+      duration: timelineMotionMs / 1000,
+      easing: timelineMotionEasing,
+    });
   }
 
   btn.addEventListener('click', () => {
+    if (isTimelineAnimating) return;
     if (visibleCount >= items.length) {
       collapseToRecent();
     } else {
@@ -699,4 +1093,3 @@ function initContactForm() {
     }
   });
 }
-

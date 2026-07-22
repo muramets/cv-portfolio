@@ -5,16 +5,24 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--canvas-inverted);
+  overscroll-behavior-y: none;
+  /* Native fallback and Apple desktop anchors use this; direct manipulation stays native. */
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--canvas);
+  background-color: var(--canvas);
+  background-image: var(--paper-grain);
+  background-size: var(--paper-grain-size);
+  background-blend-mode: multiply;
   color: var(--primary-text);
   font-family: var(--font-sans);
   font-size: 16px;
   font-weight: 500;
   line-height: 1.60;
   overflow-x: hidden;
+  overscroll-behavior-y: none;
   /* Sticky footer: page fills the viewport, footer pinned to the bottom */
   min-height: 100vh;
   display: flex;
@@ -42,8 +50,10 @@ ul { list-style: none; }
 /* Elements that exist only in the printed resume (see css/print.css) */
 .print-only { display: none; }
 
-/* ── Lenis Scroll Setup ───────────── */
-html.lenis, html.lenis body {
+/* Lenis owns desktop scroll interpolation. Its class must win over the native
+   anchor rule above or two scrolling systems would compete. */
+html.lenis,
+html.lenis body {
   height: auto;
 }
 
@@ -51,14 +61,10 @@ html.lenis, html.lenis body {
   scroll-behavior: auto !important;
 }
 
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
-}
-
 .lenis.lenis-stopped {
   overflow: hidden;
 }
 
-.lenis.lenis-smooth iframe {
-  pointer-events: none;
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }
