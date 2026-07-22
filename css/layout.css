@@ -504,7 +504,6 @@
     border-color: transparent;
     scale: 1;
     transition: scale 560ms cubic-bezier(0.22, 0.86, 0.24, 1), box-shadow 700ms cubic-bezier(0.22, 0.86, 0.24, 1), background-color 520ms cubic-bezier(0.22, 0.86, 0.24, 1), color 420ms cubic-bezier(0.22, 0.86, 0.24, 1);
-    will-change: opacity, transform, scale;
   }
 
   body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured.mint {

@@ -267,80 +267,83 @@
 }
 
 /* A cursor field creates a dimensional, timeline-only waypoint corridor. */
+/* A cursor field creates a dimensional, timeline-only waypoint corridor. */
 .journey-layout__timeline {
-  --timeline-glow-x: 144px;
-  --timeline-glow-y: 0px;
   position: relative;
   isolation: isolate;
 }
-.journey-layout__timeline::before {
-  content: '';
+.timeline-glow-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.timeline-glow-primary,
+.timeline-glow-secondary {
   position: absolute;
   top: 0;
   left: 0;
-  /* Overscan the field beyond its visible falloff: the lower fade can reveal
-     light without exposing a rectangular raster edge beside Show more. */
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform;
+}
+.timeline-glow-primary {
   width: 680px;
   height: 520px;
-  transform: translate(
-    calc(var(--timeline-glow-x) - 50%),
-    calc(var(--timeline-glow-y) - 50%)
-  );
+}
+.timeline-glow-secondary {
+  width: 560px;
+  height: 440px;
+}
+.timeline-glow-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: radial-gradient(
     ellipse at 58% 48%,
     rgba(60, 255, 208, 0.30) 0%,
-    rgba(60, 255, 208, 0.16) 18%,
-    rgba(60, 255, 208, 0.05) 36%,
-    rgba(60, 255, 208, 0.01) 50%,
-    transparent 64%
+    rgba(60, 255, 208, 0.23) 20%,
+    rgba(60, 255, 208, 0.12) 42%,
+    rgba(60, 255, 208, 0.045) 64%,
+    rgba(60, 255, 208, 0.012) 82%,
+    transparent 100%
   );
   opacity: 0;
   pointer-events: none;
-  z-index: 0;
-  will-change: auto;
+  will-change: opacity, transform;
   transition: opacity 260ms cubic-bezier(0.22, 0.82, 0.28, 1);
 }
-.journey-layout__timeline::after {
+.timeline-glow-secondary::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 560px;
-  height: 440px;
-  transform: translate(
-    calc(var(--timeline-glow-x) - 50% - 56px),
-    calc(var(--timeline-glow-y) - 50% + 30px)
-  );
+  inset: 0;
   background: radial-gradient(
     ellipse at 46% 55%,
     rgba(60, 255, 208, 0.20) 0%,
-    rgba(60, 255, 208, 0.10) 18%,
-    rgba(60, 255, 208, 0.03) 36%,
-    transparent 60%
+    rgba(60, 255, 208, 0.14) 22%,
+    rgba(60, 255, 208, 0.07) 44%,
+    rgba(60, 255, 208, 0.02) 66%,
+    rgba(60, 255, 208, 0.006) 82%,
+    transparent 100%
   );
   opacity: 0;
   pointer-events: none;
-  z-index: 0;
-  will-change: auto;
+  will-change: opacity, transform;
   transition: opacity 320ms cubic-bezier(0.22, 0.82, 0.28, 1);
 }
-.journey-layout__timeline.is-timeline-exploring::before {
+.journey-layout__timeline.is-timeline-exploring .timeline-glow-primary::before {
   opacity: 1;
   animation: timeline-glow-morph-primary 2.8s cubic-bezier(0.37, 0, 0.63, 1) infinite alternate;
 }
-.journey-layout__timeline.is-timeline-exploring::after {
+.journey-layout__timeline.is-timeline-exploring .timeline-glow-secondary::before {
   opacity: 1;
   animation: timeline-glow-morph-secondary 3.6s cubic-bezier(0.37, 0, 0.63, 1) infinite alternate;
 }
-.journey-layout__timeline.is-timeline-exploring::before,
-.journey-layout__timeline.is-timeline-exploring::after {
-  will-change: transform, scale, rotate, opacity;
-}
-/* Safari retains the cursor-following field, but not its two perpetual
-   morphing layers. Compositing those large translucent surfaces alongside a
-   long scrolling paper sheet is disproportionately expensive in WebKit. */
-html.is-webkit-safari .journey-layout__timeline.is-timeline-exploring::before,
-html.is-webkit-safari .journey-layout__timeline.is-timeline-exploring::after {
+/* Safari retains the cursor-following field, but not its perpetual morphing layers
+   to ensure 60-120fps GPU compositing during scroll and interaction. */
+html.is-webkit-safari .journey-layout__timeline.is-timeline-exploring .timeline-glow-primary::before,
+html.is-webkit-safari .journey-layout__timeline.is-timeline-exploring .timeline-glow-secondary::before {
   animation: none;
 }
 @keyframes timeline-glow-morph-primary {
@@ -353,42 +356,10 @@ html.is-webkit-safari .journey-layout__timeline.is-timeline-exploring::after {
 }
 .journey-layout__timeline .timeline-list { position: relative; z-index: 1; }
 
-/* The explorer lens belongs to the Journey chapter, never the whole page.
-   It sits beneath the chapter's content and is clipped at its paper edge. */
 body.page-about:not(.is-admin) .section--journey {
-  --journey-glow-x: -600px;
-  --journey-glow-y: -600px;
   position: relative;
   isolation: isolate;
   overflow: clip;
-}
-body.page-about:not(.is-admin) .section--journey::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 520px;
-  height: 420px;
-  transform: translate(
-    calc(var(--journey-glow-x) - 50%),
-    calc(var(--journey-glow-y) - 50%)
-  );
-  background: radial-gradient(
-    ellipse at 52% 48%,
-    rgba(60, 255, 208, 0.16) 0%,
-    rgba(60, 255, 208, 0.08) 18%,
-    rgba(60, 255, 208, 0.02) 36%,
-    transparent 60%
-  );
-  opacity: 0;
-  pointer-events: none;
-  z-index: 0;
-  will-change: auto;
-  transition: opacity 220ms cubic-bezier(0.22, 0.82, 0.28, 1);
-}
-body.page-about:not(.is-admin) .section--journey.is-journey-exploring::before {
-  opacity: 1;
-  will-change: transform, opacity;
 }
 body.page-about:not(.is-admin) .section--journey > .journey-layout {
   position: relative;
@@ -814,11 +785,11 @@ body.page-about:not(.is-admin) .section--journey > .journey-layout {
   .tile-grid { grid-template-columns: 1fr; }
   .story-tile.featured { grid-column: span 1; }
   .timeline-item { grid-template-columns: 1fr; gap: 10px; }
-  .journey-layout__timeline::before {
+  .timeline-glow-primary {
     width: 360px;
     height: 280px;
   }
-  .journey-layout__timeline::after {
+  .timeline-glow-secondary {
     width: 290px;
     height: 230px;
   }

@@ -63,7 +63,6 @@ if (isAdmin()) {
   pruneEmptyNav(); // hide links to pages that have nothing on them yet
   initDeckToggle();
   initTimelineCollapse();
-  initJourneyExplorerGlow();
 }
 initContactForm();
 initMobileNav();
@@ -321,6 +320,7 @@ function initScrollInteractionFeedback() {
   const impactChapter = document.querySelector('.scroll-chapter--impact');
   let impactTop = 0;
   let impactHeight = 0;
+  let impactTileRects = [];
   let lastScrollY = window.scrollY;
   let scrollDirection = 0;
   let lastScrollAt = 0;
@@ -330,6 +330,17 @@ function initScrollInteractionFeedback() {
     const rect = impactChapter.getBoundingClientRect();
     impactTop = window.scrollY + rect.top;
     impactHeight = impactChapter.offsetHeight;
+    const tiles = Array.from(impactChapter.querySelectorAll('.story-tile'));
+    impactTileRects = tiles.map(tile => {
+      const r = tile.getBoundingClientRect();
+      return {
+        el: tile,
+        top: r.top + window.scrollY,
+        bottom: r.bottom + window.scrollY,
+        left: r.left,
+        right: r.right,
+      };
+    });
   };
   const isImpactActive = () => {
     if (!impactChapter) return false;
@@ -387,11 +398,15 @@ function initScrollInteractionFeedback() {
   const syncHoverAtPointer = () => {
     hoverFrame = null;
     if (!isImpactActive()) return;
-    const target = lastPointer && document.elementFromPoint(lastPointer.x, lastPointer.y);
-    // :hover is evaluated by the browser even when content scrolls under a
-    // completely still cursor, so it also covers the first card encounter.
-    const nextTile = target?.closest('.story-tile')
-      ?? document.querySelector('.scroll-chapter__content .story-tile:hover');
+    let nextTile = null;
+    if (lastPointer) {
+      const pageY = lastPointer.y + window.scrollY;
+      const match = impactTileRects.find(t =>
+        lastPointer.x >= t.left && lastPointer.x <= t.right &&
+        pageY >= t.top && pageY <= t.bottom
+      );
+      nextTile = match ? match.el : null;
+    }
     if (hoveredTile && hoveredTile !== nextTile) {
       lockFeaturedHoverWhileClosing(hoveredTile);
       hoveredTile.classList.remove('has-hover-intent');
@@ -495,16 +510,24 @@ function initImpactSoftSettle() {
   let lastScrollY = window.scrollY;
   let lastDirection = 0;
 
+  let cachedChapterTop = 0;
+  let cachedChapterHeight = 0;
+  const refreshSettleBounds = () => {
+    cachedChapterTop = window.scrollY + chapter.getBoundingClientRect().top;
+    cachedChapterHeight = chapter.offsetHeight;
+  };
+  refreshSettleBounds();
+  window.addEventListener('resize', () => {
+    window.requestAnimationFrame(refreshSettleBounds);
+  }, { passive: true });
+
   const getProgressTarget = progress => {
-    const chapterTop = window.scrollY + chapter.getBoundingClientRect().top;
-    const chapterHeight = chapter.offsetHeight;
-    return chapterTop - window.innerHeight + (chapterHeight + window.innerHeight) * progress;
+    return cachedChapterTop - window.innerHeight + (cachedChapterHeight + window.innerHeight) * progress;
   };
 
   const getChapterProgress = () => {
-    const chapterTop = window.scrollY + chapter.getBoundingClientRect().top;
-    return (window.scrollY - (chapterTop - window.innerHeight))
-      / (chapter.offsetHeight + window.innerHeight);
+    return (window.scrollY - (cachedChapterTop - window.innerHeight))
+      / (cachedChapterHeight + window.innerHeight);
   };
 
   const releaseFromImpact = () => {
@@ -669,97 +692,6 @@ document.addEventListener('click', e => {
    Button text progresses: "Earlier timeline ↓" → "Another life ↓" → "Recent only ↑".
    Collapsing uses a non-destructive dual-motion animation to fold the list and
    bring Get in Touch into focus seamlessly. */
-function initJourneyExplorerGlow() {
-  const surface = document.querySelector('.section--journey');
-  if (!surface || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
-
-  const followTime = 82;
-  let glowFrame = null;
-  let scrollFrame = null;
-  let lastGlowTime = 0;
-  let lastPointer = null;
-  let surfaceRect = null;
-  let targetGlow = null;
-  let currentGlow = null;
-
-  const refreshSurfaceRect = () => {
-    surfaceRect = surface.getBoundingClientRect();
-  };
-
-  const getGlowPoint = sample => {
-    const rect = surfaceRect || (surfaceRect = surface.getBoundingClientRect());
-    // 4-side mathematical inset anchor: keeps section glow spotlight center far enough
-    // from boundaries so radial light dissolves naturally before touching edges.
-    const insetX = Math.min(280, rect.width * 0.32);
-    const insetY = Math.min(180, rect.height * 0.15);
-    return {
-      x: Math.max(insetX, Math.min(rect.width - insetX, sample.x - rect.left)),
-      y: Math.max(insetY, Math.min(rect.height - insetY, sample.y - rect.top)),
-    };
-  };
-
-  const applyGlowPoint = point => {
-    surface.style.setProperty('--journey-glow-x', point.x + 'px');
-    surface.style.setProperty('--journey-glow-y', point.y + 'px');
-    surface.classList.add('is-journey-exploring');
-  };
-
-  const renderGlow = now => {
-    glowFrame = null;
-    if (!targetGlow) return;
-
-    const target = targetGlow;
-    if (!currentGlow) currentGlow = { ...target };
-    const elapsed = lastGlowTime ? Math.min(64, now - lastGlowTime) : 16.7;
-    lastGlowTime = now;
-    const follow = 1 - Math.exp(-elapsed / followTime);
-    currentGlow.x += (target.x - currentGlow.x) * follow;
-    currentGlow.y += (target.y - currentGlow.y) * follow;
-
-    const remaining = Math.hypot(target.x - currentGlow.x, target.y - currentGlow.y);
-    if (remaining < 0.15) currentGlow = target;
-    applyGlowPoint(currentGlow);
-    if (remaining >= 0.15) glowFrame = requestAnimationFrame(renderGlow);
-  };
-
-  const setGlowTarget = point => {
-    lastPointer = point;
-    targetGlow = getGlowPoint(point);
-    if (!currentGlow) {
-      currentGlow = { ...targetGlow };
-      applyGlowPoint(currentGlow);
-    }
-    if (!glowFrame) glowFrame = requestAnimationFrame(renderGlow);
-  };
-
-  surface.addEventListener('pointerenter', event => {
-    refreshSurfaceRect();
-    setGlowTarget({ x: event.clientX, y: event.clientY });
-  });
-  surface.addEventListener('pointermove', event => {
-    setGlowTarget({ x: event.clientX, y: event.clientY });
-  }, { passive: true });
-  surface.addEventListener('pointerleave', () => {
-    targetGlow = null;
-    currentGlow = null;
-    lastGlowTime = 0;
-    lastPointer = null;
-    surfaceRect = null;
-    surface.classList.remove('is-journey-exploring');
-  });
-  const syncGlowToScroll = () => {
-    if (!lastPointer || scrollFrame) return;
-    scrollFrame = requestAnimationFrame(() => {
-      scrollFrame = null;
-      if (!lastPointer) return;
-      refreshSurfaceRect();
-      setGlowTarget(lastPointer);
-    });
-  };
-  window.addEventListener('scroll', syncGlowToScroll, { passive: true });
-  window.addEventListener('resize', syncGlowToScroll, { passive: true });
-}
-
 function initTimelineCollapse() {
   const list = document.querySelector('.timeline-list');
   const items = list ? Array.from(list.querySelectorAll('.timeline-item')) : [];
@@ -849,6 +781,16 @@ function initTimelineCollapse() {
 
   const timelineSurface = list.closest('.journey-layout__timeline');
   if (timelineSurface && matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    let glowLayer = timelineSurface.querySelector('.timeline-glow-layer');
+    if (!glowLayer) {
+      glowLayer = document.createElement('div');
+      glowLayer.className = 'timeline-glow-layer';
+      glowLayer.innerHTML = '<div class="timeline-glow-primary"></div><div class="timeline-glow-secondary"></div>';
+      timelineSurface.prepend(glowLayer);
+    }
+    const primaryGlow = glowLayer.querySelector('.timeline-glow-primary');
+    const secondaryGlow = glowLayer.querySelector('.timeline-glow-secondary');
+
     // No queued delay: each target is immediate, while the rendered position
     // catches up continuously to create a liquid, non-stepped trail.
     const glowFollowTime = 82;
@@ -869,16 +811,33 @@ function initTimelineCollapse() {
       // 4-side mathematical inset anchor: keeps the glow center far enough (insetX/insetY)
       // from all boundaries (left rail/bullets, right paper, top, bottom) so the 340px radial
       // glow circle dissolves organically to 0% opacity before touching any edge.
-      const insetX = Math.min(280, rect.width * 0.32);
+      const insetX = Math.min(220, rect.width * 0.24);
       const insetY = Math.min(180, rect.height * 0.15);
       const x = Math.max(insetX, Math.min(rect.width - insetX, sample.x - rect.left));
       const y = Math.max(insetY, Math.min(rect.height - insetY, sample.y - rect.top));
       return { x, y };
     };
 
+    let pW = 340, pH = 260, sW = 280, sH = 220;
+    const updateGlowDimensions = () => {
+      if (primaryGlow) {
+        pW = (primaryGlow.offsetWidth / 2) || 340;
+        pH = (primaryGlow.offsetHeight / 2) || 260;
+      }
+      if (secondaryGlow) {
+        sW = (secondaryGlow.offsetWidth / 2) || 280;
+        sH = (secondaryGlow.offsetHeight / 2) || 220;
+      }
+    };
+    updateGlowDimensions();
+
     const applyGlowPoint = point => {
-      timelineSurface.style.setProperty('--timeline-glow-x', point.x + 'px');
-      timelineSurface.style.setProperty('--timeline-glow-y', point.y + 'px');
+      if (primaryGlow) {
+        primaryGlow.style.transform = `translate3d(${(point.x - pW).toFixed(1)}px, ${(point.y - pH).toFixed(1)}px, 0)`;
+      }
+      if (secondaryGlow) {
+        secondaryGlow.style.transform = `translate3d(${(point.x - sW - 56).toFixed(1)}px, ${(point.y - sH + 30).toFixed(1)}px, 0)`;
+      }
       timelineSurface.classList.add('is-timeline-exploring');
     };
 
@@ -938,7 +897,10 @@ function initTimelineCollapse() {
       });
     };
     window.addEventListener('scroll', syncGlowToScroll, { passive: true });
-    window.addEventListener('resize', syncGlowToScroll, { passive: true });
+    window.addEventListener('resize', () => {
+      updateGlowDimensions();
+      syncGlowToScroll();
+    }, { passive: true });
   }
 
   window.addEventListener('resize', () => {
@@ -991,29 +953,34 @@ function initTimelineCollapse() {
     list.classList.add('is-resizing');
     list.style.height = from + 'px';
     list.style.overflow = 'hidden';
-    void list.offsetHeight; // flush, so the next height change transitions
-    list.style.transition = `height ${timelineMotionMs}ms cubic-bezier(0.37, 0, 0.63, 1)`;
-    list.style.height = to + 'px';
+    list.style.transition = 'none';
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        list.style.transition = `height ${timelineMotionMs}ms cubic-bezier(0.37, 0, 0.63, 1)`;
+        list.style.height = to + 'px';
+      });
+    });
+
     let complete = false;
     const clear = e => {
-      if (e.propertyName !== 'height') return;
+      if (e && e.propertyName && e.propertyName !== 'height') return;
       if (complete) return;
       complete = true;
       list.removeEventListener('transitionend', clear);
       window.clearTimeout(fallback);
-      // Collapse hides the surplus items while the final height is still
-      // held. Releasing the height first briefly restores the full list and
-      // produces a second, visible page movement.
       done?.();
       list.classList.remove('is-resizing');
       list.style.height = list.style.overflow = list.style.transition = '';
     };
-    const fallback = window.setTimeout(() => clear({ propertyName: 'height' }), timelineMotionMs + 80);
+    const fallback = window.setTimeout(clear, timelineMotionMs + 80);
     list.addEventListener('transitionend', clear);
   }
 
   function expandNext() {
     const prevCount = visibleCount;
+    const fromHeight = list.offsetHeight;
+
     visibleCount = Math.min(items.length, visibleCount + 3);
 
     // Find the reading anchor before the DOM grows. It is the previously
@@ -1030,14 +997,12 @@ function initTimelineCollapse() {
     list.classList.toggle('has-fade', visibleCount < items.length);
     setFadingRole();
 
+    const toHeight = list.scrollHeight;
+
     if (!reduced) {
       isTimelineAnimating = true;
       document.documentElement.style.overflowAnchor = 'none';
 
-      // Expanding no longer animates a long container's height. WebKit had to
-      // relayout every timeline role and the whole page beneath it on every
-      // height frame. The document receives its final geometry once; only the
-      // three newly revealed cards animate as independent compositor layers.
       for (let i = prevCount; i < visibleCount; i++) {
         const item = items[i];
         if (!item) continue;
@@ -1049,13 +1014,14 @@ function initTimelineCollapse() {
         }, { once: true });
       }
 
-      window.setTimeout(() => {
+      runHeight(fromHeight, toHeight, () => {
         document.documentElement.style.overflowAnchor = '';
         isTimelineAnimating = false;
-      }, 820);
+      });
+
       setTimelineReturnCue(contextRole);
       scrollWithTimeline(targetScrollY, {
-        duration: 0.72,
+        duration: timelineMotionMs / 1000,
         easing: timelineMotionEasing,
       });
     }
