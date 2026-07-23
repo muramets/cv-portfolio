@@ -23,8 +23,15 @@ body {
   line-height: 1.60;
   overflow-x: hidden;
   overscroll-behavior-y: none;
-  /* Sticky footer: page fills the viewport, footer pinned to the bottom */
+  /* Sticky footer: page fills the viewport, footer pinned to the bottom.
+     `100vh` on iOS Safari is sized against the large (toolbar-collapsed)
+     viewport regardless of the toolbar's actual current state — as it
+     expands/collapses during scroll, body's real box stops matching the
+     visible height, briefly exposing body's own white background below
+     the footer instead of the footer's own dark fill. `100dvh` tracks the
+     toolbar live; kept `100vh` first as the fallback for browsers without it. */
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }

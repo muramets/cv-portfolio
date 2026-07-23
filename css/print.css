@@ -35,6 +35,13 @@
   -webkit-print-color-adjust: exact;
 }
 
+/* html's dark canvas-inverted background (base.css, needed for the iOS
+   overscroll fill) is a global rule the print sheet never touched — with
+   print-color-adjust:exact above forcing backgrounds to actually print,
+   it filled the page with solid black wherever body's own white box
+   didn't cover it exactly. */
+html { background: #fff; }
+
 body {
   display: block;          /* undo the sticky-footer flex column */
   min-height: 0;
@@ -213,6 +220,11 @@ body {
   margin-left: 1mm;
   gap: 0;
 }
+
+/* The screen rail (components.css, ::before repeating-gradient) has no
+   print guard, so it rendered alongside this border-left rail — two
+   dashed lines instead of one. */
+.timeline-list::before { display: none; }
 
 /* Roles may split across pages — the page fills fully and only the
    overflow continues on the next one. Individual bullets stay whole. */
