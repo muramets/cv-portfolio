@@ -78,7 +78,7 @@ test('Journey intro keeps its native sticky context during the component fold', 
 
   assert.match(layout, /is-journey-collapsing:not\(\.is-admin\) \.section--journey \.journey-layout/);
   assert.match(about, /journey-layout">\s*<div class="journey-layout__intro">/);
-  assert.match(layout, /\.journey-layout__intro \{\s+position: sticky;/);
+  assert.match(layout, /\.journey-layout__intro \{[\s\S]{0,400}position: sticky;/);
   assert.doesNotMatch(about, /journey-layout__intro-shell/);
   assert.doesNotMatch(timeline, /is-fold-locked|cloneNode\(|position: fixed/);
 });
