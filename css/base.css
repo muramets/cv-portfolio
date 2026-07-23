@@ -12,15 +12,7 @@ html {
 }
 
 body {
-  /* Visually always fully covered by section/footer backgrounds — this
-     value is invisible in normal rendering. It matters anyway: Safari 26+
-     tints its toolbar (top and bottom) from body's declared
-     background-color directly, not from what's actually painted on
-     screen, falling back to it whenever no edge-adjacent fixed/sticky
-     element claims the toolbar first. Matching html's inverted canvas
-     here (rather than the light default) is what keeps the bottom
-     toolbar dark instead of flashing white. */
-  background-color: var(--canvas-inverted);
+  background-color: var(--canvas);
   background-image: var(--paper-grain);
   background-size: var(--paper-grain-size);
   background-blend-mode: multiply;
@@ -42,6 +34,27 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+}
+
+/* Safari 26+ tints its toolbars (top/bottom) from the background-color of
+   whatever fixed/sticky element sits nearest the viewport edge, falling
+   back to body/html only if none is found. Matching body's own real
+   background-color to the dark footer (an earlier attempt) fixed the
+   bottom toolbar, but body's background-color isn't just an invisible
+   fallback: Journey's perspective-fold transform tilts the section in 3D,
+   briefly exposing whatever is actually behind it, which turned into a
+   visible black flash instead of the previous white one. This generated
+   sentinel is fixed to the true bottom viewport edge, independent of any
+   scrolled or transformed content, so Safari's tint source and the page's
+   real background can be set independently. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: auto 0 0 0;
+  height: 1px;
+  background-color: var(--canvas-inverted);
+  pointer-events: none;
+  z-index: -1;
 }
 
 a {
