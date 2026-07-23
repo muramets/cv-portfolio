@@ -986,6 +986,13 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
       animation-timeline: --impact-chapter;
       /* Cards are one body behind the doors, rather than a delayed queue. */
       animation-range: cover 29% cover 62%;
+      /* Without this, the browser only promotes each card to its own
+         compositing layer the instant this animation actually starts —
+         5 cards doing that simultaneously on the very first door-open is
+         a visible stutter. Promoting ahead of time (as soon as the chapter
+         is in scroll range, not when the animation begins) moves that cost
+         off the first frame; every later replay already has the layer. */
+      will-change: transform, opacity;
     }
 
     /* Copy arrives as one complete layer only after the surface has begun to
@@ -994,6 +1001,7 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
       animation: impact-card-content-arrive 1s cubic-bezier(0.22, 0.82, 0.28, 1) both;
       animation-timeline: --impact-chapter;
       animation-range: cover 36% cover 62%;
+      will-change: transform, opacity;
     }
 
     body.page-about:not(.is-admin) .section--journey .journey-layout {

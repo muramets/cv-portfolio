@@ -55,26 +55,28 @@ export function initSectionBar({ getLenis, duration, easing }) {
 
   // Live chrome-offset token consumed by sticky/docked headings elsewhere
   // (Impact, Journey) so their resting position tracks the bar's real box
-  // instead of an independently eyeballed value. `getBoundingClientRect()`
-  // is safe to read every tick here — the bar is `position: fixed`, so its
-  // rect is scroll-invariant (see docs/REFACTOR-READINESS.md rule 1).
+  // instead of an independently eyeballed value. Deliberately NOT
+  // `bar.getBoundingClientRect().bottom`: the bar mounts pre-visible
+  // (opacity 0, translateY(-24px)) and only animates to its resting
+  // transform once scrolled past the header, over a 300ms CSS transition —
+  // reading the live rect during that transition (or before it's even
+  // started) reads the pre-visible position. An earlier version resynced
+  // on `transitionend` instead, but that fires up to 300ms after the
+  // scroll that triggered `.is-visible` — on a fast scroll impulse the
+  // visitor can already be deep into Impact's card animation by the time
+  // it lands, so the padding this drives changes mid-animation and every
+  // card visibly jumps. `top` (CSS, unaffected by the transform) + the
+  // rendered height (also transform-invariant) gives the bar's true
+  // settled bottom edge directly, correct from the very first paint,
+  // with nothing to wait for.
   const syncTopbarBottom = () => {
+    const top = parseFloat(getComputedStyle(bar).top) || 0;
     document.documentElement.style.setProperty(
-      '--topbar-bottom', `${bar.getBoundingClientRect().bottom}px`,
+      '--topbar-bottom', `${top + bar.getBoundingClientRect().height}px`,
     );
   };
   new ResizeObserver(syncTopbarBottom).observe(bar);
   document.fonts?.ready.then(syncTopbarBottom);
-  // The bar mounts pre-visible (opacity 0, translateY(-24px)) and only
-  // animates in later via a transform/opacity transition once scrolled past
-  // the header (see the .is-visible toggle below). ResizeObserver only
-  // fires on box-size changes, never on that transform — so without this,
-  // the very first (pre-visible) rect is what every docked heading reads,
-  // permanently off by the entrance offset. Resync once the arrival
-  // transition actually finishes.
-  bar.addEventListener('transitionend', event => {
-    if (event.propertyName === 'transform') syncTopbarBottom();
-  });
 
   let activeSection = null;
   let indicatorFrame = null;
@@ -108,6 +110,25 @@ export function initSectionBar({ getLenis, duration, easing }) {
     headerObserver.observe(header);
   }
 
+  // The generic per-section threshold (getSectionViewportTarget) fires late
+  // for Contact — only once its own title has approached the bar — so both
+  // scrolling up out of Contact and scrolling down into it could show
+  // Experience or even Impact for a stretch while Contact was already
+  // visibly pushing Journey's heading out. The trigger is Journey's own
+  // sticky heading leaving its pinned position: while stuck, its rect.top
+  // equals its computed `top`; once Contact starts shoving it out, it
+  // moves *above* that resting value. Checking specifically for "above"
+  // (not just "not equal to") is what excludes the unrelated case of the
+  // heading not having reached its sticky position yet on the way in from
+  // Impact — that reads as rect.top being *below* the resting value.
+  const hasJourneyHeadingStartedMoving = () => {
+    const intro = document.querySelector('.journey-layout__intro');
+    if (!intro) return false;
+    const stickyTop = parseFloat(getComputedStyle(intro).top);
+    if (!Number.isFinite(stickyTop)) return false;
+    return intro.getBoundingClientRect().top < stickyTop - 2;
+  };
+
   // The active tab is derived from the same document coordinate used for
   // navigation. This remains correct when Impact overlaps Journey and when
   // Journey changes height while roles are expanded or collapsed.
@@ -129,6 +150,10 @@ export function initSectionBar({ getLenis, duration, easing }) {
       const target = getSectionViewportTarget(section);
       if (currentScroll + 1 >= target) nextSection = section;
     });
+
+    if (hasJourneyHeadingStartedMoving()) {
+      nextSection = sections[sections.length - 1];
+    }
 
     if (isAtBottom) {
       nextSection = sections[sections.length - 1];

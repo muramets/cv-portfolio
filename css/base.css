@@ -1,4 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap');
+/* Font loading moved to <link> tags in <head> (see about.html etc.) — an
+   @import here isn't discovered by the browser until base.css itself has
+   already loaded, delaying font fetch start by a full round-trip. That
+   extra delay was long enough that a fast scroll could reach Impact's
+   cards before the swap from fallback font to Space Grotesk/Anton had
+   happened, causing a visible reflow (text re-wraps, max-content grid
+   rows resize) mid card-reveal animation — read as the card "jumping". */
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
