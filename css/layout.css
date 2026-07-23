@@ -764,7 +764,7 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
   }
 
   body.page-about:not(.is-admin) .journey-layout__timeline .timeline-list {
-    margin-left: 0;
+    margin-left: -16px;
   }
 
   body.page-about:not(.is-admin) .section--journey {
