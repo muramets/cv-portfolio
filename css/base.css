@@ -12,7 +12,15 @@ html {
 }
 
 body {
-  background-color: var(--canvas);
+  /* Visually always fully covered by section/footer backgrounds — this
+     value is invisible in normal rendering. It matters anyway: Safari 26+
+     tints its toolbar (top and bottom) from body's declared
+     background-color directly, not from what's actually painted on
+     screen, falling back to it whenever no edge-adjacent fixed/sticky
+     element claims the toolbar first. Matching html's inverted canvas
+     here (rather than the light default) is what keeps the bottom
+     toolbar dark instead of flashing white. */
+  background-color: var(--canvas-inverted);
   background-image: var(--paper-grain);
   background-size: var(--paper-grain-size);
   background-blend-mode: multiply;
