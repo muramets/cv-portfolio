@@ -8,6 +8,7 @@ export function initScrollInteractionFeedback() {
   let hoveredTile = null;
   let hoverFrame = null;
   const impactChapter = document.querySelector('.scroll-chapter--impact');
+  const featuredTile = impactChapter?.querySelector('.story-tile.featured.mint') ?? null;
   // The outer chapter is a normal-flow element (270svh tall, never sticky),
   // so its document-space top is scroll-invariant and safe to cache.
   let impactTop = 0;
@@ -44,19 +45,17 @@ export function initScrollInteractionFeedback() {
   };
 
   const resetFeaturedHoverAtClosedDoors = () => {
+    if (!featuredTile) return;
     const progress = getImpactProgress();
     if (progress === null || progress > 0.272) return;
 
-    const featured = document.querySelector('.scroll-chapter__content .story-tile.featured.mint');
-    if (!featured) return;
-    featured.classList.remove('is-hover-primed', 'has-hover-intent');
-    if (hoveredTile === featured) hoveredTile = null;
+    featuredTile.classList.remove('is-hover-primed', 'has-hover-intent');
+    if (hoveredTile === featuredTile) hoveredTile = null;
   };
 
   const activateCardHover = tile => {
     if (!tile) return;
     tile.classList.add('has-hover-intent');
-    if (tile.matches('.featured.mint')) tile.classList.add('is-hover-primed');
   };
 
   const syncHoverAtPointer = () => {
@@ -86,6 +85,17 @@ export function initScrollInteractionFeedback() {
   };
 
   const isFinePointer = event => event.pointerType === 'mouse' || event.pointerType === 'pen';
+
+  // Priming is deliberately its own, narrower listener: pointerenter only
+  // ever fires from the cursor genuinely crossing into the card, never from
+  // scroll re-evaluating the shared hit test below. That hit test is correct
+  // now (see getImpactTiles), which means a cursor merely resting somewhere
+  // the card scrolls under would otherwise prime — and thus mint — it before
+  // any real touch.
+  featuredTile?.addEventListener('pointerenter', event => {
+    if (!isFinePointer(event)) return;
+    featuredTile.classList.add('is-hover-primed');
+  });
 
   document.addEventListener('pointermove', event => {
     if (!isFinePointer(event)) return;

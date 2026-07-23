@@ -633,27 +633,31 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
       color: var(--verge-ultraviolet);
     }
 
-    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:is(:hover, .has-hover-intent) {
+    /* Unlike the generic lift rule above, mint's black state is keyed to
+       genuine :hover alone, not .has-hover-intent: it must not flash black
+       just because scroll carried the card under a resting cursor (see
+       impact.js's pointerenter-only priming for the same reasoning). */
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:hover {
       --impact-mint-text-surface: var(--absolute-black);
       background: var(--absolute-black);
       color: var(--hazard-white);
       box-shadow: 0 30px 70px rgba(0, 0, 0, 0.34), 0 10px 24px rgba(0, 0, 0, 0.16);
     }
 
-    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:is(:hover, .has-hover-intent) .story-headline {
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:hover .story-headline {
       color: var(--hazard-white);
     }
 
-    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:is(:hover, .has-hover-intent) .story-kicker {
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:hover .story-kicker {
       color: rgba(255, 255, 255, 0.55);
       opacity: 1;
     }
 
-    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:is(:hover, .has-hover-intent) .story-deck {
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:hover .story-deck {
       color: rgba(255, 255, 255, 0.80);
     }
 
-    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:is(:hover, .has-hover-intent) .story-meta {
+    body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.mint:hover .story-meta {
       color: rgba(255, 255, 255, 0.75);
       border-top-color: rgba(255, 255, 255, 0.20);
     }
