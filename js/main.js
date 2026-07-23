@@ -784,7 +784,6 @@ function initTimelineCollapse() {
   let visibleCount = 3;
   const timelineMotionMs = 520;
   const timelineMotionCurve = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
-  const contactFocusDuration = 0.9;
   // Equivalent to cubic-bezier(.333, 1, .667, 1): quick pickup, soft settle.
   const contactFocusEasing = t => 1 - Math.pow(1 - t, 3);
   const returnCueListeners = new Map();
@@ -989,6 +988,10 @@ function initTimelineCollapse() {
 
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let isTimelineAnimating = false;
+  // Monotonic token: bumping it instantly kills any in-flight fold loop.
+  // Guarantees no stray rAF chain can ever drive the scroll position after
+  // its collapse cycle has finished (or been superseded).
+  let foldToken = 0;
 
   function getButtonText(count) {
     if (count >= items.length) return 'Recent only ↑';
@@ -1038,9 +1041,13 @@ function initTimelineCollapse() {
 
     return new Promise(resolve => {
       let settled = false;
-      const onTransitionEnd = event => {
-        if (event.target === list && event.propertyName === 'height') finish();
-      };
+
+      // Lenis.resize() hard-clamps the current scroll position to the new
+      // (shrinking) limit with no easing of its own. Calling it mid-transition
+      // snaps the viewport to the document's new bottom the instant it goes
+      // out of bounds, which reads as an abrupt jump straight to Get in Touch
+      // instead of a smooth fold. It is only safe to resync once the height
+      // has fully settled.
       const finish = () => {
         if (settled) return;
         settled = true;
@@ -1048,8 +1055,14 @@ function initTimelineCollapse() {
         window.clearTimeout(fallback);
         list.classList.remove('is-resizing');
         list.style.height = list.style.overflow = list.style.transition = '';
+        lenisInstance?.resize?.();
         resolve();
       };
+
+      const onTransitionEnd = event => {
+        if (event.target === list && event.propertyName === 'height') finish();
+      };
+
       const fallback = window.setTimeout(finish, duration + 100);
 
       list.addEventListener('transitionend', onTransitionEnd);
@@ -1060,26 +1073,92 @@ function initTimelineCollapse() {
     });
   }
 
+  function getPageEndTarget() {
+    return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  }
+
+  /* Collapse fold with per-frame scroll compensation. Without it, everything
+     below the list (the button, Get in Touch) rises by the full height delta
+     while the viewport stays put — ~2000px in half a second reads as an
+     instant snap to Contact no matter how the height itself is eased. Driving
+     height and scroll together from one rAF loop pins the fold edge to the
+     viewport, so the user watches cards fold away exactly as if they were
+     scrolling up through the collapsed page by hand. */
+  function animateCollapseFold(fromHeight, toHeight) {
+    const delta = fromHeight - toHeight;
+    if (delta <= 0) return Promise.resolve();
+
+    const startScroll = window.scrollY;
+    const duration = Math.min(900, timelineMotionMs + delta * 0.15);
+    // Ease-in-out: the fold departs from rest. An ease-out here consumes
+    // ~6% of the travel on the very first frame, which reads as a jerk.
+    const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+    list.classList.add('is-resizing');
+    list.style.overflow = 'hidden';
+    list.style.transition = 'none';
+    list.style.height = fromHeight + 'px';
+
+    // Lenis must not participate in the fold: even immediate scrollTo calls
+    // pass through its lerp, so the applied position trails the written one
+    // by hundreds of px and the browser clamps to the shrinking document —
+    // a dive to the page bottom. Stop it and drive native scroll directly;
+    // collapseToRecent re-syncs and restarts it once geometry is stable.
+    lenisInstance?.stop?.();
+    const token = ++foldToken;
+
+    return new Promise(resolve => {
+      const started = performance.now();
+      const cleanup = () => {
+        list.classList.remove('is-resizing');
+        list.style.height = list.style.overflow = list.style.transition = '';
+      };
+      const step = now => {
+        if (token !== foldToken) {
+          cleanup();
+          resolve();
+          return;
+        }
+        const progress = Math.min(1, (now - started) / duration);
+        const eased = ease(progress);
+        const height = Math.round(fromHeight - delta * eased);
+        list.style.height = height + 'px';
+        window.scrollTo(0, Math.max(0, startScroll - (fromHeight - height)));
+
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          cleanup();
+          resolve();
+        }
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
   function scrollToPageEnd(target) {
     if (Math.abs(target - window.scrollY) <= 2) return Promise.resolve();
     const viewportDistance = Math.abs(target - window.scrollY) / window.innerHeight;
-    const duration = Math.min(1.6, Math.max(contactFocusDuration, 0.62 + viewportDistance * 0.24));
+    const duration = Math.min(1.6, Math.max(0.9, 0.62 + viewportDistance * 0.24));
     if (lenisInstance) {
       return new Promise(resolve => {
+        // Fail-safe: if the trajectory is interrupted (user wheel input),
+        // Lenis never fires onComplete; without this the collapse promise
+        // hangs and the button stays dead until reload.
+        const failSafe = window.setTimeout(resolve, duration * 1000 + 400);
         lenisInstance.scrollTo(target, {
           duration,
           easing: contactFocusEasing,
-          onComplete: resolve,
+          onComplete: () => {
+            window.clearTimeout(failSafe);
+            resolve();
+          },
         });
       });
     }
 
     window.scrollTo({ top: target, behavior: 'smooth' });
     return new Promise(resolve => window.setTimeout(resolve, duration * 1000));
-  }
-
-  function getPageEndTarget() {
-    return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
   }
 
   async function expandNext() {
@@ -1119,8 +1198,6 @@ function initTimelineCollapse() {
     try {
       // Collapse is the direct reverse of expanding: the visible roles stay
       // in the list while its clipping edge rises to the three-role height.
-      // This preserves the full closing animation instead of replacing it
-      // with an instantaneous compact layout.
       const fromHeight = list.offsetHeight;
       const listTop = list.getBoundingClientRect().top;
       const thirdRoleBottom = items[2].getBoundingClientRect().bottom;
@@ -1131,25 +1208,36 @@ function initTimelineCollapse() {
       setFadingRole(3);
       swapButtonText(getButtonText(3));
 
-      // Journey folds upward from its lower edge. The viewport is not
-      // compensated here: keeping its position lets the lower page rise and
-      // the collapse mask consume cards instead of pushing them downward.
-      document.documentElement.style.overflowAnchor = 'none';
-      await animateListHeight(fromHeight, toHeight);
+      // The section shrinks every frame during the fold, which re-evaluates
+      // the journey sheet's scroll-driven transform; a transformed ancestor
+      // breaks the sticky intro and the Journey heading vanishes. Suspend
+      // that animation for the duration of the collapse.
+      document.body.classList.add('is-journey-collapsing');
 
-      // Remove the clipped roles only once the list has reached its natural
-      // compact height. This no longer changes document geometry.
+      document.documentElement.style.overflowAnchor = 'none';
+      await animateCollapseFold(fromHeight, toHeight);
+
       visibleCount = 3;
       updateVisibility();
       list.classList.remove('is-collapsing');
 
-      // Let the compact layout settle, then use the one
-      // visible Lenis trajectory to travel through Contact to the real page
-      // end. There is no compensating scrollTo in between.
-      await new Promise(r => requestAnimationFrame(r));
+      // Re-align Lenis with reality before handing control back: new
+      // document bounds, internal position synced to where the native
+      // fold left the viewport. Otherwise start() snaps back to the
+      // pre-fold position.
       lenisInstance?.resize?.();
+      lenisInstance?.scrollTo?.(window.scrollY, { immediate: true, force: true });
+      lenisInstance?.start?.();
+
+      // The fold has settled with the viewport parked above the compact
+      // Journey; the same gesture now rides the heavy custom scroll down
+      // into Get in Touch.
       await scrollToPageEnd(getPageEndTarget());
     } finally {
+      // Invalidate any stray fold loop and re-enable the sheet animation
+      // only after the whole gesture (fold + ride) has fully ended.
+      foldToken++;
+      document.body.classList.remove('is-journey-collapsing');
       document.documentElement.style.overflowAnchor = originalOverflowAnchor;
       list.classList.remove('is-collapsing');
       isTimelineAnimating = false;

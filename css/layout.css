@@ -684,6 +684,14 @@
       animation-range: entry 0% entry 68%;
     }
 
+    /* While the timeline folds, the section height changes every frame and
+       this scroll-driven transform re-evaluates; a transformed ancestor
+       breaks the sticky intro (the Journey heading vanishes mid-collapse).
+       The collapse gesture suspends the sheet until it fully lands. */
+    body.page-about.is-journey-collapsing:not(.is-admin) .section--journey {
+      animation: none;
+    }
+
     body.page-about:not(.is-admin) .scroll-chapter__shutter--left {
       animation: impact-shutter-left 1s linear both;
       animation-timeline: --impact-chapter;
