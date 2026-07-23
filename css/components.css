@@ -401,6 +401,14 @@ body.page-about:not(.is-admin) .section--journey > .journey-layout {
   z-index: 1;
 }
 
+/* The Journey sheet continues visually beneath the perspective-compressed
+   Contact page. It is paint only — no added scroll height or sticky range. */
+@media (min-width: 901px) {
+  body.page-about:not(.is-admin) .section--journey {
+    overflow: visible;
+  }
+}
+
 /* Timeline Rail nodes & graduation cap badge */
 .timeline-dot {
   position: absolute;

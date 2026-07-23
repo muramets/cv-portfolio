@@ -80,7 +80,28 @@ test('Journey intro keeps its native sticky context during the component fold', 
   assert.match(about, /journey-layout">\s*<div class="journey-layout__intro">/);
   assert.match(layout, /\.journey-layout__intro \{\s+position: sticky;/);
   assert.doesNotMatch(about, /journey-layout__intro-shell/);
-  assert.doesNotMatch(timeline + layout, /is-fold-locked|cloneNode\(|position: fixed/);
+  assert.doesNotMatch(timeline, /is-fold-locked|cloneNode\(|position: fixed/);
+});
+
+test('Contact perspective keeps the Journey intro in normal scroll flow', async () => {
+  const [main, hold, timeline, layout] = await Promise.all([
+    read('js/main.js'),
+    read('js/features/journey-contact-hold.js'),
+    read('js/features/journey/index.js'),
+    read('css/layout.css'),
+  ]);
+
+  assert.match(main, /from '\.\/features\/journey-contact-hold\.js'/);
+  assert.match(main, /initJourneyContactHold\(\);/);
+  assert.match(hold, /--contact-sheet-transform/);
+  assert.match(hold, /CONTACT_SHEET_START_SCALE_Y = 1/);
+  assert.match(hold, /--contact-footer-depth/);
+  assert.match(hold, /timelinefoldstart/);
+  assert.doesNotMatch(hold, /is-journey-contact-held|journey-contact-pin|PIN_RELEASE_HYSTERESIS/);
+  assert.doesNotMatch(hold, /foldToken|setJourneySurfaceHold|renderTimelineFoldFrame/);
+  assert.doesNotMatch(layout, /is-journey-contact-held|journey-contact-pin/);
+  assert.match(layout, /\.journey-layout__timeline \{\s+grid-column: 2;\s+grid-row: 1;/);
+  assert.doesNotMatch(timeline, /initJourneyContactHold/);
 });
 
 test('the fold reserves Journey height and applies the control ceiling before a visible resize', async () => {
@@ -111,12 +132,25 @@ test('the fold reserves Journey height and applies the control ceiling before a 
   assert.match(layout, /--journey-fold-sheet-transform/);
   assert.match(layout, /--journey-paper-layer: 6/);
   assert.match(layout, /--contact-paper-layer: 7/);
-  assert.match(layout, /#contact \{\s+position: relative;\s+z-index: var\(--contact-paper-layer\);[\s\S]*background-image: var\(--paper-grain\);[\s\S]*overflow: clip;[\s\S]*border-top: 1px solid rgba\(19, 19, 19, 0\.12\);[\s\S]*box-shadow: inset 0 10px 12px -12px rgba\(19, 19, 19, 0\.30\);/);
-  assert.match(layout, /#contact::before \{[\s\S]*box-shadow: 0 24px 180px -10px rgba\(19, 19, 19, 0\.096\);/);
+  assert.match(layout, /#contact \{\s+position: relative;\s+z-index: var\(--contact-paper-layer\);[\s\S]*background-image: var\(--paper-grain\);[\s\S]*overflow: clip;[\s\S]*box-shadow: 0 -28px 68px rgba\(19, 19, 19, 0\.16\);/);
+  assert.doesNotMatch(layout, /#contact \{[\s\S]{0,400}border-top/);
+  assert.match(layout, /--contact-fold-entry-transform/);
+  assert.match(layout, /transform: var\(--contact-sheet-transform, none\);/);
+  assert.match(layout, /transform-origin: 50% calc\(100% \+ var\(--contact-footer-depth, 0px\)\);/);
+  assert.doesNotMatch(layout, /view-timeline-name: --contact-chapter;/);
+  assert.doesNotMatch(layout, /--journey-contact-hold/);
+  assert.doesNotMatch(layout, /padding-bottom: var\(--journey-contact-hold\)/);
+  assert.match(layout, /--journey-contact-control-gap: 24px;/);
+  assert.match(layout, /section--journey \{\s+\/\* The timeline control is Journey's real lower edge[\s\S]{0,300}padding-bottom: var\(--journey-contact-control-gap\);/);
+  assert.match(layout, /--journey-contact-underlay-depth: clamp\(420px, 72svh, 820px\);/);
+  assert.match(layout, /section--journey::after \{[\s\S]{0,300}height: calc\(100% \+ var\(--journey-contact-underlay-depth\)\);/);
+  assert.match(layout, /section--journey \{[\s\S]{0,500}background-color: transparent;[\s\S]{0,300}border-bottom: 0;/);
+  assert.match(layout, /#contact \{\s+\/\* Contact must not cover the timeline control:[\s\S]{0,400}margin-top: 0;/);
+  assert.doesNotMatch(layout, /journey-layout__timeline-catch|journey-hold-spacer/);
   assert.match(components, /\.timeline-expand\.is-folding/);
   assert.match(timeline, /control\.setAttribute\('aria-busy', String\(isFolding\)\)/);
   assert.doesNotMatch(timeline + components, /timeline-fold-progress/);
-  assert.doesNotMatch(timeline + layout, /cloneNode\(|position: fixed/);
+  assert.doesNotMatch(timeline, /cloneNode\(|position: fixed/);
   assert.doesNotMatch(timeline, /\.stop\(\)/);
 });
 

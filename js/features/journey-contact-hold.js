@@ -1,0 +1,167 @@
+// Contact's paper arrival is derived from normal-flow geometry. Journey stays
+// in that same flow: its intro must leave the viewport with the timeline as
+// Contact comes over the sheet. This module has no authority over the fold.
+const DESKTOP_QUERY = '(min-width: 901px)';
+const HOLD_DEBUG_QUERY = 'journey-hold-debug';
+const CONTACT_SHEET_START_SCALE_X = 0.98;
+// The sheet hinges below the footer. Any vertical scale around that distant
+// origin pushes its visible top away from the real 24px `Show more` gap.
+// Keep the depth/width perspective, but never create empty Journey space.
+const CONTACT_SHEET_START_SCALE_Y = 1;
+const CONTACT_SHEET_START_TILT_DEG = 4.5;
+const CONTACT_SHEET_START_DEPTH_PX = -30;
+
+const getDocumentTop = node => {
+  let top = 0;
+  let current = node;
+  while (current) {
+    top += current.offsetTop;
+    current = current.offsetParent;
+  }
+  return top;
+};
+
+function createDebug({ section, intro, contact }) {
+  if (!new URLSearchParams(window.location.search).has(HOLD_DEBUG_QUERY)) return null;
+
+  const snapshot = () => {
+    const introStyle = getComputedStyle(intro);
+    const contactStyle = getComputedStyle(contact);
+    const sectionStyle = getComputedStyle(section);
+    const introRect = intro.getBoundingClientRect();
+    const contactRect = contact.getBoundingClientRect();
+    const contactFlowTop = getDocumentTop(contact) - window.scrollY;
+    const stickyTop = parseFloat(introStyle.top) || 0;
+
+    return {
+      scrollY: Math.round(window.scrollY),
+      viewport: { height: window.innerHeight, width: window.innerWidth },
+      intro: {
+        top: Math.round(introRect.top),
+        bottom: Math.round(introRect.bottom),
+        height: Math.round(introRect.height),
+        position: introStyle.position,
+        expectedTop: Math.round(stickyTop),
+        isAtExpectedTop: Math.abs(introRect.top - stickyTop) < 2,
+      },
+      journey: {
+        top: Math.round(section.getBoundingClientRect().top),
+        bottom: Math.round(section.getBoundingClientRect().bottom),
+        transform: sectionStyle.transform,
+        zIndex: sectionStyle.zIndex,
+      },
+      contact: {
+        top: Math.round(contactRect.top),
+        flowTop: Math.round(contactFlowTop),
+        bottom: Math.round(contactRect.bottom),
+        marginTop: contactStyle.marginTop,
+        transform: contactStyle.transform,
+        zIndex: contactStyle.zIndex,
+        overlapsIntro: contactRect.top < introRect.bottom,
+        coversIntroTop: contactRect.top <= introRect.top,
+      },
+    };
+  };
+
+  const debug = {
+    snapshot,
+    log(label = 'manual') {
+      const state = snapshot();
+      // eslint-disable-next-line no-console
+      console.log(`[journey-contact-hold:${label}]`, state);
+      return state;
+    },
+  };
+  window.__journeyContactHoldDebug = debug;
+  debug.log('mounted');
+  return debug;
+}
+
+export function initJourneyContactHold() {
+  const section = document.querySelector('.section--journey');
+  const layout = section?.querySelector('.journey-layout');
+  const intro = layout?.querySelector('.journey-layout__intro');
+  const contact = document.getElementById('contact');
+  const footer = document.querySelector('.footer');
+  const media = matchMedia(DESKTOP_QUERY);
+  if (!section || !layout || !intro || !contact) return () => {};
+
+  let frame = null;
+  let destroyed = false;
+  let footerDepth = null;
+  const debug = createDebug({ section, intro, contact });
+
+  const clearContactSheetPerspective = () => {
+    document.body.style.removeProperty('--contact-sheet-transform');
+    document.body.style.removeProperty('--contact-footer-depth');
+  };
+  const syncContactSheetOrigin = () => {
+    const nextDepth = footer?.offsetHeight ?? 0;
+    if (nextDepth === footerDepth) return;
+    footerDepth = nextDepth;
+    document.body.style.setProperty('--contact-footer-depth', `${nextDepth}px`);
+  };
+  const renderContactSheetPerspective = () => {
+    // Measure flow geometry, not getBoundingClientRect(): the latter already
+    // includes this transform and would make the progress feed back on itself.
+    const contactFlowTop = getDocumentTop(contact) - window.scrollY;
+    // Contact is fully flat by the instant its top reaches the lower edge of
+    // the pinned Journey intro — before it can obscure any of that heading.
+    const stickyTop = parseFloat(getComputedStyle(intro).top) || 0;
+    const contactSettleTop = stickyTop + intro.offsetHeight;
+    const approachDistance = Math.max(1, window.innerHeight - contactSettleTop);
+    const linearProgress = Math.max(0, Math.min(1,
+      (window.innerHeight - contactFlowTop) / approachDistance,
+    ));
+    // Ease out quickly so `Get in Touch` becomes readable soon after entry,
+    // with the exact final pixels resolved at the pinned-intro handoff.
+    const settle = 1 - Math.pow(1 - linearProgress, 1.6);
+    const scaleX = CONTACT_SHEET_START_SCALE_X
+      + (1 - CONTACT_SHEET_START_SCALE_X) * settle;
+    const scaleY = CONTACT_SHEET_START_SCALE_Y
+      + (1 - CONTACT_SHEET_START_SCALE_Y) * settle;
+    const tilt = CONTACT_SHEET_START_TILT_DEG * (1 - settle);
+    const depth = CONTACT_SHEET_START_DEPTH_PX * (1 - settle);
+    const transform = linearProgress >= 1
+      ? 'none'
+      : `perspective(1400px) translateZ(${depth.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)}) rotateX(${tilt.toFixed(3)}deg)`;
+
+    document.body.style.setProperty('--contact-sheet-transform', transform);
+  };
+
+  const sync = () => {
+    frame = null;
+    if (destroyed || !media.matches || document.body.classList.contains('is-timeline-folding')) {
+      clearContactSheetPerspective();
+      return;
+    }
+
+    syncContactSheetOrigin();
+    renderContactSheetPerspective();
+  };
+  const schedule = () => {
+    if (frame !== null) return;
+    frame = requestAnimationFrame(sync);
+  };
+
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule, { passive: true });
+  media.addEventListener('change', schedule);
+  window.addEventListener('timelinefoldstart', schedule);
+  window.addEventListener('timelinefoldend', schedule);
+  schedule();
+
+  return () => {
+    destroyed = true;
+    if (frame !== null) cancelAnimationFrame(frame);
+    window.removeEventListener('scroll', schedule);
+    window.removeEventListener('resize', schedule);
+    media.removeEventListener('change', schedule);
+    window.removeEventListener('timelinefoldstart', schedule);
+    window.removeEventListener('timelinefoldend', schedule);
+    clearContactSheetPerspective();
+    if (window.__journeyContactHoldDebug === debug) {
+      delete window.__journeyContactHoldDebug;
+    }
+  };
+}

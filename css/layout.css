@@ -373,30 +373,23 @@ body.page-about:not(.is-admin) {
 body.page-about:not(.is-admin) #contact {
   position: relative;
   z-index: var(--contact-paper-layer);
-  /* Contact is the lower sheet. The broad shade is a real, static shadow
-     cast from its top edge, not a page-height gradient. It is clipped to this
-     sheet and fades out well before the form. */
+  /* The hinge sits one footer-depth below the sheet, so Contact reads as a
+     page stored under the footer instead of a panel starting at its edge. */
+  transform-origin: 50% calc(100% + var(--contact-footer-depth, 0px));
+  /* Written from Journey → Contact flow geometry in JS. A normal CSS
+     view-timeline completes while Contact merely fits inside the viewport,
+     which is earlier than the moment it actually covers Journey. */
+  transform: var(--contact-sheet-transform, none);
+  /* Contact repeats the Impact→Journey rule exactly rather than inventing a
+     second treatment: it is the sheet on top, so it casts the identical
+     shadow — same offset, blur and colour — up onto the sheet underneath.
+     No border: the shadow alone marks the seam. */
   background-color: var(--canvas);
   background-image: var(--paper-grain);
   background-size: var(--paper-grain-size);
   background-blend-mode: multiply;
   overflow: clip;
-  border-top: 1px solid rgba(19, 19, 19, 0.12);
-  /* Contact receives a narrow, permanent shadow from the Journey sheet above
-     it. Keeping the shade inside the lower paper avoids the large floating
-     cloud produced by an outer shadow on Contact. */
-  box-shadow: inset 0 10px 12px -12px rgba(19, 19, 19, 0.30);
-}
-
-body.page-about:not(.is-admin) #contact::before {
-  content: '';
-  position: absolute;
-  z-index: 0;
-  inset: 0 0 auto;
-  height: 1px;
-  pointer-events: none;
-  /* 0.096 is a 20% lift over the deliberately subdued 0.08 shadow. */
-  box-shadow: 0 24px 180px -10px rgba(19, 19, 19, 0.096);
+  box-shadow: 0 -28px 68px rgba(19, 19, 19, 0.16);
 }
 
 body.page-about:not(.is-admin) #contact > .section-container {
@@ -461,6 +454,10 @@ body.page-about.is-journey-collapsing:not(.is-admin) #contact {
     /* Shared lower edge for the sticky Impact composition and Journey's
        timeline control: one deliberate gutter, never stacked whitespace. */
     --about-content-edge: clamp(16px, 2.4svh, 32px);
+    --journey-contact-control-gap: 24px;
+    /* A paint-only paper continuation hides Journey's physical lower edge
+       while the next page is still compressed in perspective. */
+    --journey-contact-underlay-depth: clamp(420px, 72svh, 820px);
   }
 
   body.page-about:not(.is-admin) .section--impact { padding: 0; }
@@ -706,6 +703,11 @@ body.page-about.is-journey-collapsing:not(.is-admin) #contact {
   }
 
   body.page-about:not(.is-admin) .journey-layout__intro {
+    /* Explicit grid placement survives the visual promotion to `fixed` at
+       the Contact handoff: timeline must always retain the wide second
+       column instead of auto-flowing into Journey's narrow title column. */
+    grid-column: 1;
+    grid-row: 1;
     position: sticky;
     top: clamp(32px, 9svh, 96px);
   }
@@ -715,6 +717,8 @@ body.page-about.is-journey-collapsing:not(.is-admin) #contact {
   }
 
   body.page-about:not(.is-admin) .journey-layout__timeline {
+    grid-column: 2;
+    grid-row: 1;
     min-width: 0;
   }
 
@@ -722,14 +726,92 @@ body.page-about.is-journey-collapsing:not(.is-admin) #contact {
     margin-left: 0;
   }
 
+  body.page-about:not(.is-admin) .section--journey {
+    /* The timeline control is Journey's real lower edge. This is the only
+       flow distance before Contact, so Show more always retains the same
+       compact, deliberate paper gap as the list changes height. */
+    padding-bottom: var(--journey-contact-control-gap);
+    /* The paper itself lives on ::after below, so the surface can continue
+       seamlessly under Contact without creating a second visible sheet edge. */
+    background-color: transparent;
+    background-image: none;
+    border-bottom: 0;
+  }
+
+  body.page-about:not(.is-admin) .section--journey::after {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    inset: 0 0 auto;
+    height: calc(100% + var(--journey-contact-underlay-depth));
+    pointer-events: none;
+    /* A single, very long Journey paper surface. It stays white through the
+       content and only gradually resolves into gray after the timeline. */
+    background-color: var(--canvas);
+    background-image:
+      linear-gradient(to bottom,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0) 68%,
+        rgba(230, 230, 230, 0.38) 84%,
+        rgba(202, 202, 202, 0.70) 100%),
+      var(--paper-grain);
+    background-size: 100% 100%, var(--paper-grain-size);
+    background-repeat: no-repeat, repeat;
+    background-blend-mode: normal, multiply;
+  }
+
+  body.page-about:not(.is-admin) #contact {
+    /* Contact must not cover the timeline control: it starts only after
+       Journey's real lower edge, while the gray paper continuation carries
+       the visual transition between both sheets. */
+    margin-top: 0;
+  }
+
+  /* Footer is the upper, final sheet: Contact may visually pass beneath it,
+     but it can never paint over the footer while its distant hinge resolves. */
+  body.page-about:not(.is-admin) .footer {
+    position: relative;
+    z-index: calc(var(--contact-paper-layer) + 1);
+  }
+
   @supports (animation-timeline: view()) {
     body.page-about:not(.is-admin) .section--journey {
       transform-origin: 50% 100%;
       /* A resistant leading edge, then an increasingly willing pull — like
-         drawing a physical sheet across the previous page. */
-      animation: journey-sheet-settle 1s cubic-bezier(0.62, 0.02, 0.26, 1) both;
-      animation-timeline: --journey-chapter;
-      animation-range: entry 0% entry 68%;
+         drawing a physical sheet across the previous page. The exit is the
+         same gesture read backwards: as Contact rises over Journey's own
+         lower edge, the sheet tips the opposite way and compresses, instead
+         of just sliding out flat. */
+      animation:
+        journey-sheet-settle 1s cubic-bezier(0.62, 0.02, 0.26, 1) both,
+        journey-sheet-exit 1s cubic-bezier(0.62, 0.02, 0.26, 1) both;
+      animation-timeline: --journey-chapter, --journey-chapter;
+      animation-range: entry 0% entry 68%, exit 32% exit 100%;
+      /* Both animations write `transform`. Without `add`, the exit
+         animation's backwards-filled `none` (its state before "exit 32%"
+         starts) replaces the entry animation's output for the entire
+         approach, erasing the arrival tilt. `add` composes the exit's
+         identity transform on top instead, so it is invisible until its own
+         range actually begins. */
+      animation-composition: replace, add;
+    }
+
+    /* Contact's perspective is driven by the flow position of its top edge,
+       not this view timeline: it must stay compressed until its top reaches
+       viewport top and has physically covered Journey. */
+    body.page-about:not(.is-admin) #contact {
+      transform-origin: 50% calc(100% + var(--contact-footer-depth, 0px));
+    }
+
+    /* Contact's own arrival animation writes `transform` continuously, and a
+       running/filled CSS animation always wins over a plain declaration on
+       the same element — it would silently swallow the fold's
+       --journey-fold-contact-shift translateY otherwise. Stop the animation
+       and compose the fold's translation on top of the frozen entry pixels,
+       the same freeze-then-compose approach used for the Journey sheet. */
+    body.page-about.is-journey-collapsing:not(.is-admin) #contact {
+      animation: none;
+      transform: var(--contact-fold-entry-transform, none) translateY(var(--journey-fold-contact-shift, 0px));
     }
 
     /* Freeze each scroll-driven Journey layer at the pixels it had when the
@@ -740,8 +822,19 @@ body.page-about.is-journey-collapsing:not(.is-admin) #contact {
       animation: none;
     }
 
+    /* The fold's own perspective reuses the entry hinge — same
+       perspective(1800px) depth and the same 50% 100% (bottom edge) origin
+       set on .section--journey above — instead of a second, unrelated 3D
+       treatment. The frozen entry transform stays the base frame; the
+       tilt/depth pair is written every fold rAF, rising and returning to
+       flat by the last frame. That return-to-flat is what lets cleanup
+       delete the variables afterwards without a visible reset, and what
+       keeps the last rendered frame matching the flat compact DOM. */
     body.page-about.is-journey-collapsing:not(.is-admin) .section--journey {
-      transform: var(--journey-fold-sheet-transform, none);
+      transform: var(--journey-fold-sheet-transform, none)
+        perspective(1800px)
+        translateZ(var(--journey-fold-depth, 0px))
+        rotateX(var(--journey-fold-tilt, 0deg));
       opacity: var(--journey-fold-sheet-opacity, 1);
     }
 
@@ -902,8 +995,22 @@ body.page-about.is-journey-collapsing:not(.is-admin) #contact {
 }
 
 @keyframes journey-sheet-settle {
-  from { transform: perspective(1800px) rotateX(4deg); }
+  /* Same grammar the fold reuses: perspective(1800px), a slight recede via
+     translateZ, and rotateX around the bottom edge (see the shared
+     transform-origin: 50% 100% on .section--journey). Here it plays once, as
+     the sheet is pulled taut out from under Impact and laid flat. */
+  from { transform: perspective(1800px) translateZ(-18px) rotateX(4deg); }
   to { transform: none; }
+}
+
+@keyframes journey-sheet-exit {
+  /* The inverse of journey-sheet-settle: same perspective depth and bottom
+     hinge, opposite rotation, plus a slight scale down so the sheet reads as
+     compressing away rather than just tipping. This is what the visitor
+     should feel as the physical counterpart to the arrival — the sheet
+     closes the way it opened, mirrored. */
+  from { transform: none; }
+  to { transform: perspective(1800px) translateZ(-26px) scale(0.984) rotateX(-3.2deg); }
 }
 
 @keyframes journey-intro-arrive-webkit {

@@ -24,6 +24,16 @@ const foldEase = t => (t < 0.5
   ? 4 * t * t * t
   : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
+// The fold's own perspective borrows the entry sheet's grammar (perspective +
+// rotateX around the bottom edge, see journey-sheet-settle) rather than
+// inventing a second 3D treatment. It rises and returns to flat across the
+// same eased fold clock as the list, so it starts at the frozen entry frame
+// and ends exactly on the flat compact composition — nothing to visibly
+// reset once the variables are removed after commit.
+const SHEET_FOLD_TILT_MAX_DEG = 1.6;
+const SHEET_FOLD_DEPTH_MAX_PX = -12;
+const foldPerspectiveProgress = eased => Math.sin(Math.PI * eased);
+
 const noOpController = Object.freeze({
   destroy() {},
   refresh() {},
@@ -70,6 +80,8 @@ export function mountJourneyTimeline({
   const contact = document.getElementById('contact');
   const originalContactFoldShift = contact?.style.getPropertyValue('--journey-fold-contact-shift') ?? '';
   const originalContactFoldShiftPriority = contact?.style.getPropertyPriority('--journey-fold-contact-shift') ?? '';
+  const originalContactFoldEntryTransform = contact?.style.getPropertyValue('--contact-fold-entry-transform') ?? '';
+  const originalContactFoldEntryTransformPriority = contact?.style.getPropertyPriority('--contact-fold-entry-transform') ?? '';
   const root = document.documentElement;
   const originalRootScrollBehavior = root.style.getPropertyValue('scroll-behavior');
   const originalRootScrollBehaviorPriority = root.style.getPropertyPriority('scroll-behavior');
@@ -81,6 +93,10 @@ export function mountJourneyTimeline({
   const originalLayoutFoldTransformPriority = section.style.getPropertyPriority('--journey-fold-layout-transform');
   const originalLayoutFoldOpacity = section.style.getPropertyValue('--journey-fold-layout-opacity');
   const originalLayoutFoldOpacityPriority = section.style.getPropertyPriority('--journey-fold-layout-opacity');
+  const originalSheetFoldTilt = section.style.getPropertyValue('--journey-fold-tilt');
+  const originalSheetFoldTiltPriority = section.style.getPropertyPriority('--journey-fold-tilt');
+  const originalSheetFoldDepth = section.style.getPropertyValue('--journey-fold-depth');
+  const originalSheetFoldDepthPriority = section.style.getPropertyPriority('--journey-fold-depth');
 
   const glow = mountTimelineGlow({
     surface: timelineSurface,
@@ -254,10 +270,35 @@ export function mountJourneyTimeline({
     const sheetStyle = getComputedStyle(section);
     section.style.setProperty('--journey-fold-sheet-transform', sheetStyle.transform);
     section.style.setProperty('--journey-fold-sheet-opacity', sheetStyle.opacity);
-    if (!layout) return;
-    const layoutStyle = getComputedStyle(layout);
-    section.style.setProperty('--journey-fold-layout-transform', layoutStyle.transform);
-    section.style.setProperty('--journey-fold-layout-opacity', layoutStyle.opacity);
+    // The fold's own tilt/depth start from flat on top of the frozen entry
+    // frame above, so frame zero of the fold reads identical to the pixels
+    // that were already on screen the instant before the class was added.
+    section.style.setProperty('--journey-fold-tilt', '0deg');
+    section.style.setProperty('--journey-fold-depth', '0px');
+    if (layout) {
+      const layoutStyle = getComputedStyle(layout);
+      section.style.setProperty('--journey-fold-layout-transform', layoutStyle.transform);
+      section.style.setProperty('--journey-fold-layout-opacity', layoutStyle.opacity);
+    }
+    // Contact carries its own entry-arrival transform (mirroring Journey's
+    // own arrival over Impact). That animation is stopped for the fold too,
+    // so its current pixels have to be frozen here as well — otherwise the
+    // fold's --journey-fold-contact-shift translateY would compose against
+    // `none` instead of whatever tilt Contact's own approach was showing.
+    if (contact) {
+      contact.style.setProperty('--contact-fold-entry-transform', getComputedStyle(contact).transform);
+    }
+  }
+
+  // Writes this frame's fold perspective. Skipped on WebKit Safari: that
+  // browser already drops the entry's scroll-linked transform for
+  // compositing cost on this long, textured sheet (see the WebKit override
+  // in layout.css), so it must not pay for a per-frame transform here either.
+  function applyFoldPerspective(eased) {
+    if (isWebKitSafari) return;
+    const progress = foldPerspectiveProgress(eased);
+    section.style.setProperty('--journey-fold-tilt', `${(SHEET_FOLD_TILT_MAX_DEG * progress).toFixed(3)}deg`);
+    section.style.setProperty('--journey-fold-depth', `${(SHEET_FOLD_DEPTH_MAX_PX * progress).toFixed(2)}px`);
   }
 
   function releaseJourneyPresentation() {
@@ -285,6 +326,26 @@ export function mountJourneyTimeline({
       originalLayoutFoldOpacity,
       originalLayoutFoldOpacityPriority,
     );
+    restoreFoldProperty(
+      section,
+      '--journey-fold-tilt',
+      originalSheetFoldTilt,
+      originalSheetFoldTiltPriority,
+    );
+    restoreFoldProperty(
+      section,
+      '--journey-fold-depth',
+      originalSheetFoldDepth,
+      originalSheetFoldDepthPriority,
+    );
+    if (contact) {
+      restoreFoldProperty(
+        contact,
+        '--contact-fold-entry-transform',
+        originalContactFoldEntryTransform,
+        originalContactFoldEntryTransformPriority,
+      );
+    }
   }
 
   function createJourneyDebug() {
@@ -467,6 +528,7 @@ export function mountJourneyTimeline({
         const expectedScroll = applyControlCeiling(plan, startScroll, frame.reservedHeight, eased);
         setJourneySurfaceHold(frame.reservedHeight);
         renderTimelineFoldFrame(plan, eased);
+        applyFoldPerspective(eased);
         recordDebugFrame({ plan, frame, expectedScroll, stage: 'folding' });
         if (progress < 1) requestAnimationFrame(step);
         else resolve(true);
@@ -582,6 +644,38 @@ export function mountJourneyTimeline({
   control.addEventListener('click', onControlClick);
   window.addEventListener('resize', onResize, { passive: true });
   renderVisibleItems();
+
+  // Ad-hoc diagnostics for the Journey→Contact seam, opt-in behind the same
+  // ?journey-debug=1 flag as the fold harness. Logs on every scroll
+  // (rAF-throttled) so the overlap/paint state can be inspected directly in
+  // the console while scrolling by hand.
+  if (debug) {
+    let holdDebugFrame = null;
+    const logHoldState = () => {
+      holdDebugFrame = null;
+      const contactRect = contact?.getBoundingClientRect();
+      const journeyRect = section.getBoundingClientRect();
+      // eslint-disable-next-line no-console
+      console.log('[journey-hold]', {
+        scrollY: Math.round(window.scrollY),
+        contactTop: contactRect ? Math.round(contactRect.top) : null,
+        sectionTop: Math.round(journeyRect.top),
+        sectionBottom: Math.round(journeyRect.bottom),
+        journeyBg: getComputedStyle(section).backgroundColor,
+        contactBg: contact ? getComputedStyle(contact).backgroundColor : null,
+        journeyOpacity: getComputedStyle(section).opacity,
+        contactOpacity: contact ? getComputedStyle(contact).opacity : null,
+        journeyTransform: getComputedStyle(section).transform,
+        contactTransform: contact ? getComputedStyle(contact).transform : null,
+        contactMarginTop: contact ? getComputedStyle(contact).marginTop : null,
+      });
+    };
+    window.addEventListener('scroll', () => {
+      if (holdDebugFrame) return;
+      holdDebugFrame = requestAnimationFrame(logHoldState);
+    }, { passive: true });
+    logHoldState();
+  }
 
   return {
     get phase() { return phase; },
