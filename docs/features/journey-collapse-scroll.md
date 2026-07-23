@@ -1,30 +1,49 @@
-# Journey Collapse & Smooth Bézier Scroll to Contact
+# Journey Timeline
 
-## Current State
-При нажатии на «Recent only ↑» сворачивание идёт в две фазы одного жеста:
+## Contract
 
-1. **Компенсированный fold** (`animateCollapseFold`): высота списка и позиция скролла ведутся вместе из одного rAF-цикла. На каждом кадре `scrollY` уменьшается ровно на столько, на сколько сжался список (`lenisInstance.scrollTo(..., { immediate: true, force: true })`), поэтому нижняя кромка Journey остаётся неподвижной на экране, и пользователь видит, как карточки плавно складываются — как при естественном скролле вверх сквозь свёрнутую страницу. Длительность масштабируется от дельты высоты (520–900ms).
-2. **Тяжёлый доезд** (`scrollToPageEnd`): после осадки fold и однократного `lenisInstance.resize()` тот же импульс продолжается кастомным Lenis-скроллом (`contactFocusEasing`, 0.9–1.6s по дистанции) из свёрнутого состояния вниз до «Get in Touch».
+The Journey remains a section of `about.html`. A visitor sees the three most
+recent roles first and can reveal earlier roles in batches. When `Recent only
+↑` is pressed, only the timeline collapses; it must never route the viewport
+to Contact.
 
-## Known Gotchas
-- **Некомпенсированное сжатие читается как мгновенный скачок.** Если во время сжатия `scrollY` стоит на месте, весь контент ниже списка (кнопка, Get in Touch) поднимается на полную дельту (~2000px за полсекунды) — визуально это «резкое схлопывание с фокусом на Get in Touch», независимо от кривой самой высоты. Единственное лекарство — покадровая компенсация скролла.
-- **Компенсацию нельзя вести через Lenis.** Даже `scrollTo(..., { immediate: true })` проходит через lerp Lenis: применённая позиция отстаёт от записанной на сотни пикселей, браузер прижимает скролл к сжимающемуся низу документа — «нырок» к футеру. На время fold Lenis выключается (`stop()`), скролл ведётся нативным `window.scrollTo`, после — `resize()` + `scrollTo(current, immediate, force)` + `start()`, иначе `start()` отбрасывает страницу к до-fold позиции.
-- **`lenisInstance.resize()` жёстко подрезает скролл под новый лимит без сглаживания.** Вызывать его можно только когда скролл гарантированно ниже нового лимита (после компенсированного fold), не покадрово во время сжатия.
-- **Scroll-driven `journey-sheet-settle` ломает sticky-заголовок во время fold.** Секция каждый кадр меняет высоту → view-timeline transform переприменяется → transform на предке отменяет sticky, и заголовок Journey исчезает. На время жеста ставится `body.is-journey-collapsing`, отключающий анимацию листа (layout.css).
-- **`onComplete` Lenis не вызывается при прерывании траектории** (колесо пользователя) — без fail-safe таймера промис `scrollToPageEnd` зависает и кнопка таймлайна остаётся мёртвой до перезагрузки.
-- **Токен `foldToken`** гасит любой «осиротевший» rAF-цикл fold: после завершения жеста ни один отложенный кадр не может снова двигать скролл.
+The final frame anchors the bottom of `Recent only ↑` 72px above the bottom of
+the viewport. Contact is therefore below the fold and enters only through the
+next manual scroll.
 
-## Roadmap
-- [x] Определение геометрии свёрнутого Journey (3 роли).
-- [x] Компенсированный fold: высота и скролл в одном rAF-цикле, кромка Journey неподвижна на экране (`animateCollapseFold`).
-- [x] Тяжёлый кастомный Lenis-скролл из свёрнутого состояния до Get in Touch на том же импульсе (`scrollToPageEnd`). ← YOU ARE HERE
-- [ ] (Market-Ready Vision): Интерактивный мини-навигатор таймлайна с превью скрытых ролей при наведении на компактную кнопку.
+## Boundaries
 
-## Technical Implementation
+| Responsibility | Module |
+| --- | --- |
+| Role markup and editable fields | `js/entities.js` + `js/admin.js` |
+| Timeline state and labels | `js/features/journey/timeline-state.js` |
+| Compact-state measurement and viewport anchor | `js/features/journey/timeline-geometry.js` |
+| Pointer glow | `js/features/journey/timeline-glow.js` |
+| Control, disclosure and Lenis coordination | `js/features/journey/index.js` |
+| Page composition | `about.html` |
 
-### Key Files
-- [main.js](file:///Users/muramets/Documents/CV/js/main.js#L244-L325) — Функция `initSectionBar()`: ограничение `getSectionViewportTarget` для последней секции значением `maxScroll - 8` и проверка `isAtBottom` в `syncScrollSpy()`, гарантирующие подсветку таба «Collab» (Get in Touch) во floating bar при прокрутке до низа страницы.
-- [main.js](file:///Users/muramets/Documents/CV/js/main.js#L1075-L1210) — Функции `animateCollapseFold()`, `scrollToPageEnd()` и `collapseToRecent()`: компенсированный fold, затем тяжёлый доезд до Get in Touch. `animateListHeight()` (CSS-transition) остаётся только для `expandNext()`.
+The admin never mounts the visitor component. It edits the same `roles`
+collection directly, without a disclosure button or transient animation state.
 
+## Fold sequence
 
+1. Measure the current list and the third card.
+2. Derive the compact list height and final document position of the existing
+   button. No section edge or document maximum is used as an anchor.
+3. Pause Lenis, then animate the list's shrink and native `scrollY` together
+   for 1500ms — mirrored, frame for frame, by growth of a spacer placed right
+   after the control (`foldSpacer` in `index.js`). The list gives up height
+   exactly as fast as the spacer reserves it, so the timeline column's total
+   height, and therefore the page's maximum scroll, never changes during the
+   fold. `scrollY` is always free to reach the interpolated target without the
+   browser clamping it into Contact, and `.section--journey`'s `overflow:
+   clip` boundary never shrinks either, so the sticky intro keeps its full
+   range for every frame.
+4. Once the animation lands exactly on the measured target, commit the
+   compact DOM (which removes the height the spacer was holding, now entirely
+   below the viewport) and release the spacer back to 0. Write the measured
+   target once more, resize Lenis, and resume normal scrolling.
 
+Scroll-driven transforms on Journey are disabled only while the fold is in
+progress, so the original heading retains its native sticky context. There are
+no heading clones, wrappers or fixed-position substitutes.

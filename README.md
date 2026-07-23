@@ -38,7 +38,8 @@ ES modules require a server; opening `index.html` via `file://` won't work.
 css/
   tokens.css        design tokens (source: docs/DESIGN.md)
   base.css          reset, typography, links
-  layout.css        header/nav (The Verge structure), sections, footer
+  layout.css        header, sections and desktop scroll scenes
+  site-chrome.css   footer, responsive header and navigation controls
   components.css    buttons, story tiles, timeline, forms
   admin.css         edit-mode UI — all rules gated behind body.is-admin
 js/
@@ -49,7 +50,8 @@ js/
   render.js         data → DOM, no admin chrome
   admin.js          inline editing, add/delete/reorder, toolbar (lazy-loaded)
   dnd.js            generic drag-and-drop sorting (entities and page blocks)
-  main.js           bootstrap
+  content-model.js  versioned content migrations, shared by remote and drafts
+  main.js           bootstrap and public interaction composition
 docs/
   DESIGN.md         design source of truth (see below)
 ```
@@ -63,7 +65,8 @@ Everything on the site is either:
   `<div data-collection="achievements" data-entity-type="achievement">`.
   New entity types (articles, sales cards with price/CTA) are added in
   `entities.js` only — rendering, editing, persistence are generic.
-- a **singleton text** — any element with `data-text-id="about.deck"`,
+- a **singleton text** — any element with a stable id such as
+  `data-text-id="about.deck.past"`,
   editable in admin mode, stored in one key/value map.
 
 Content resolution: `localStorage override → seed (content.js)`.
@@ -106,7 +109,14 @@ yellow. On the real The Verge all sections use the same ultraviolet band;
 per-page accents are our variation within the tile palette.
 
 Auth is a stub by design — `auth.js#isAdmin()` is the single seam where a
-real backend session check will land.
+real backend session check will land. Gate lettering is editable in admin mode
+as `about.impact.gate.left` and `about.impact.gate.right`.
+
+## Checks
+
+```bash
+npm run check      # syntax + data/model contract tests
+```
 
 ## Design source of truth
 

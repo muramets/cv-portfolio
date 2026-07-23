@@ -1,10 +1,13 @@
 {
   "name": "cv-portfolio",
   "version": "1.0.0",
+  "type": "module",
   "description": "Ilia Blinov's CV Portfolio website in The Verge design language",
   "main": "index.html",
   "scripts": {
-    "dev": "node dev-server.js 8000",
-    "check": "echo 'No compilation or lint errors for static website prototype.'"
+    "dev": "node dev-server.cjs 8000",
+    "check:syntax": "node scripts/check-syntax.mjs",
+    "test": "node --test",
+    "check": "npm run check:syntax && npm test"
   }
 }

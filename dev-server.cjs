@@ -43,7 +43,7 @@ const server = http.createServer((req, res) => {
 
   res.writeHead(200, {
     'Content-Type': contentType,
-    'Cache-Control': 'no-store, must-revalidate'
+    'Cache-Control': 'no-store, must-revalidate',
   });
 
   fs.createReadStream(filePath).pipe(res);

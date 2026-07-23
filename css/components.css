@@ -220,9 +220,12 @@
 
 /* During the reverse disclosure the clipping edge is preceded by a soft
    paper dissolve. Cards are eaten from the bottom instead of disappearing at
-   one hard overflow boundary while Journey rolls up. */
+   one hard overflow boundary while Journey rolls up. The fade length is driven
+   per frame from JS (index.js) so it trails the vanishing roles and collapses
+   to zero as the list reaches compact height — the three surviving roles and
+   their bullets are never masked. This base value only covers the first frame. */
 .timeline-list.is-collapsing {
-  --timeline-collapse-fade: clamp(220px, 24vw, 300px);
+  --timeline-collapse-fade: 0px;
   -webkit-mask-image: linear-gradient(
     to bottom,
     #000 0,

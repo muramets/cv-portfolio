@@ -587,7 +587,7 @@
     will-change: transform;
   }
 
-  body.page-about:not(.is-admin) .scroll-chapter__shutter::after {
+  body.page-about:not(.is-admin) .scroll-chapter__shutter-label {
     position: absolute;
     top: 50%;
     font-family: var(--font-display);
@@ -610,8 +610,7 @@
     transform: translateX(-106%);
   }
 
-  body.page-about:not(.is-admin) .scroll-chapter__shutter--left::after {
-    content: 'IMPACT';
+  body.page-about:not(.is-admin) .scroll-chapter__shutter--left .scroll-chapter__shutter-label {
     /* Keep the visible T optically flush with the door seam without letting
        its overhang cross into the revealed page beneath it. */
     right: -0.025em;
@@ -626,8 +625,7 @@
     transform: translateX(106%);
   }
 
-  body.page-about:not(.is-admin) .scroll-chapter__shutter--right::after {
-    content: '01';
+  body.page-about:not(.is-admin) .scroll-chapter__shutter--right .scroll-chapter__shutter-label {
     left: clamp(22px, 2.6vw, 48px);
   }
 
@@ -684,12 +682,19 @@
       animation-range: entry 0% entry 68%;
     }
 
-    /* While the timeline folds, the section height changes every frame and
-       this scroll-driven transform re-evaluates; a transformed ancestor
-       breaks the sticky intro (the Journey heading vanishes mid-collapse).
-       The collapse gesture suspends the sheet until it fully lands. */
-    body.page-about.is-journey-collapsing:not(.is-admin) .section--journey {
+    /* While the timeline folds, its changing height re-evaluates both
+       scroll-driven Journey animations. A transform on either ancestor (the
+       sheet or its layout grid) turns the sticky intro into ordinary flow,
+       which makes the heading disappear as the viewport is compensated.
+       Freeze both layers until the gesture lands. */
+    body.page-about.is-journey-collapsing:not(.is-admin) .section--journey,
+    body.page-about.is-journey-collapsing:not(.is-admin) .section--journey .journey-layout {
       animation: none;
+      transform: none;
+    }
+
+    body.page-about.is-journey-collapsing:not(.is-admin) .journey-layout__intro {
+      opacity: 1;
     }
 
     body.page-about:not(.is-admin) .scroll-chapter__shutter--left {
@@ -868,441 +873,5 @@
   to {
     opacity: 1;
     transform: none;
-  }
-}
-
-/* Empty state on stub pages */
-.empty-note {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--muted-text);
-  border: 1.5px dashed var(--hairline-dark);
-  border-radius: var(--radius-tile);
-  padding: 48px;
-  text-align: center;
-}
-
-/* ─────────────────────────────────────────────────────────
-   FOOTER
-───────────────────────────────────────────────────────── */
-.footer {
-  background: var(--canvas-inverted);
-  color: var(--inverted-text);
-  padding: 56px var(--gutter);
-  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
-  margin-top: auto; /* sticky footer: pushes to the bottom on short pages */
-}
-
-.footer-shell { max-width: var(--container); margin: 0 auto; }
-
-.footer-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 32px;
-}
-
-.footer-col h6 {
-  margin: 0 0 14px;
-  color: var(--jelly-mint);
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-}
-
-.footer-col span,
-.footer-col a {
-  display: block;
-  margin: 0 0 10px;
-  color: var(--inverted-text);
-  opacity: 0.55;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.40;
-  transition: opacity 150ms ease, color 150ms ease;
-}
-
-.footer-col a:hover { opacity: 1; color: var(--jelly-mint); }
-
-/* Freed footer-line slots store '' — visitors never see the gap
-   (admin keeps them visible as an editing affordance) */
-body:not(.is-admin) .footer-col span:empty { display: none; }
-
-/* Pill tag inside the footer — keep the design-system spec:
-   mint fill, black text, full opacity (footer link styles must not bleed in) */
-.footer-col a.btn-tag {
-  display: inline-block;
-  margin-top: 8px;
-  padding: 8px 16px;   /* match the height rhythm of the other pills */
-  color: var(--absolute-black);
-  opacity: 1;
-  font-size: 11px;
-  line-height: 1.4;
-}
-.footer-col a.btn-tag:hover { color: var(--absolute-black); background: rgba(60, 255, 208, 0.75); }
-
-.footer-credit {
-  margin-top: 48px;
-  padding-top: 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.10);
-  opacity: 0.40;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.footer-credit a { color: var(--jelly-mint); font-weight: 700; }
-
-/* ─────────────────────────────────────────────────────────
-   RESPONSIVE
-───────────────────────────────────────────────────────── */
-@media (max-width: 1024px) {
-  .site-header { padding: 0 32px; }
-  .section { padding: 56px 32px; }
-  .footer { padding: 48px 32px; }
-}
-
-@media (max-width: 900px) {
-  .site-header { padding: 0 20px; }
-  .site-header-inner { padding: 16px 0 24px; }
-  .vnav a { font-size: 16px; }
-  .vnav li { padding-right: 18px; }
-  .vnav li:not(:last-child)::after { right: 5px; }
-
-  .masthead-wordmark { font-size: clamp(56px, 15vw, 100px); }
-  .masthead-avatar { width: 140px; height: 140px; }
-  .masthead-avatar-wrap::before { width: 140px; height: 140px; top: 8px; left: 8px; }
-
-  .section { padding: 48px 20px; }
-  .section-title { font-size: clamp(36px, 10vw, 60px); }
-  .footer { padding: 40px 20px; }
-  .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-  .footer-credit { flex-direction: column; gap: 12px; text-align: center; }
-}
-
-@media (max-width: 650px) {
-  .masthead-wordmark { font-size: clamp(38px, 12.5vw, 64px); padding: 0; }
-  .masthead-hero-row {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 12px;
-  }
-  .masthead-avatar-wrap {
-    align-self: center;
-    margin-bottom: 0;
-    margin-right: 6px;
-  }
-  .masthead-avatar {
-    width: 104px;
-    height: 104px;
-  }
-  .masthead-avatar-wrap::before {
-    width: 104px;
-    height: 104px;
-    top: 6px;
-    left: 6px;
-  }
-  .masthead-meta-row:empty { display: none; }
-}
-
-/* ─────────────────────────────────────────────────────────
-   MOBILE & DESKTOP NAV — burger + drawer (mobile), floating section bar (all)
-───────────────────────────────────────────────────────── */
-.nav-burger, .nav-drawer, .nav-overlay { display: none; }
-
-html.drawer-open { overflow: hidden; }
-
-/* Section bar: fixed frosted segmented toggle pill at top of screen on desktop and mobile.
-   Appears smoothly when entering section content past the header. */
-.section-bar {
-  --section-bar-indicator-x: 0px;
-  --section-bar-indicator-width: 0px;
-  display: flex;
-  gap: 4px;
-  position: fixed;
-  top: 16px;
-  left: 50%;
-  transform: translate(-50%, -24px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 300ms ease, transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 900;
-  width: fit-content;
-  max-width: calc(100vw - 32px);
-  padding: 4px;
-  border-radius: 999px;
-  background: rgba(235, 235, 235, 0.65);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  scrollbar-width: none;
-  isolation: isolate;
-}
-.section-bar.is-visible {
-  opacity: 1;
-  transform: translate(-50%, 0);
-  pointer-events: auto;
-}
-/* Backdrop filtering forces WebKit to sample the changing Journey content
-   below the fixed bar every frame. An almost-opaque paper fill preserves the
-   control's appearance without the readback. */
-html.is-webkit-safari .section-bar {
-  background: rgba(235, 235, 235, 0.96);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-.section-bar::-webkit-scrollbar { display: none; }
-.section-bar::before {
-  content: '';
-  position: absolute;
-  z-index: 0;
-  top: 4px;
-  bottom: 4px;
-  left: 0;
-  width: var(--section-bar-indicator-width);
-  border-radius: 999px;
-  background: var(--verge-ultraviolet);
-  box-shadow: 0 5px 12px rgba(50, 0, 155, 0.28);
-  opacity: 0;
-  transform: translate3d(var(--section-bar-indicator-x), 0, 0);
-  transition:
-    transform 340ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    width 340ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    opacity 160ms ease;
-  will-change: transform, width;
-  pointer-events: none;
-}
-.section-bar.has-active-indicator::before { opacity: 1; }
-
-.section-bar-tab {
-  position: relative;
-  z-index: 1;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: var(--secondary-text);
-  padding: 9px 18px;
-  border-radius: 999px;
-  white-space: nowrap;
-  transition: color 220ms cubic-bezier(0.22, 0.61, 0.36, 1), background 180ms ease;
-}
-.section-bar-tab:hover:not(.is-active) {
-  color: var(--primary-text);
-  background: rgba(0, 0, 0, 0.04);
-}
-.section-bar-tab.is-active {
-  background: transparent;
-  color: var(--hazard-white);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .section-bar::before,
-  .section-bar-tab { transition: none; }
-}
-
-@media (max-width: 650px) {
-  .vnav ul { display: none; }
-  .vnav .masthead-kicker {
-    font-size: clamp(9px, 2.6vw, 11px);
-    letter-spacing: 1.2px;
-    line-height: 1.25;
-    margin-right: 12px;
-  }
-
-  .nav-burger {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 5px;
-    margin-left: auto;
-    width: 40px;
-    height: 40px;
-    padding: 8px;
-    background: none;
-    border: none;
-    cursor: pointer;
-  }
-  .nav-burger span {
-    display: block;
-    height: 2px;
-    background: var(--primary-text);
-    border-radius: 2px;
-  }
-
-  .nav-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 300ms ease;
-    z-index: 1090;
-  }
-  .nav-overlay.is-open { opacity: 1; pointer-events: auto; }
-
-  .nav-drawer {
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(78vw, 340px);
-    background: var(--verge-ultraviolet);
-    color: var(--hazard-white);
-    padding: 20px 24px 28px;
-    transform: translateX(103%);
-    transition: transform 340ms cubic-bezier(0.32, 0.72, 0.33, 1);
-    z-index: 1100;
-    overflow: hidden;
-  }
-  .nav-drawer.is-open { transform: translateX(0); }
-
-  .nav-drawer-close {
-    align-self: flex-end;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--hazard-white);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    padding: 8px 0;
-  }
-
-  .nav-drawer-links {
-    display: flex;
-    flex-direction: column;
-    margin-top: 24px;
-    position: relative;
-    z-index: 1;
-  }
-  .nav-drawer .drawer-link {
-    font-family: var(--font-sans);
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--hazard-white);
-    padding: 16px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.22);
-    opacity: 0;
-    transform: translateX(16px);
-    transition: opacity 300ms ease, transform 300ms ease;
-  }
-  .nav-drawer.is-open .drawer-link { opacity: 1; transform: none; }
-  .nav-drawer .drawer-link.is-active { color: var(--jelly-mint); }
-
-  .drawer-cta {
-    position: relative;
-    z-index: 1;
-    margin-top: auto;
-    align-self: flex-start;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--absolute-black);
-    background: var(--jelly-mint);
-    padding: 12px 24px;
-    border-radius: var(--radius-pill);
-  }
-
-  /* Giant vertical wordmark ghosting the panel — the Verge signature */
-  .drawer-watermark {
-    position: absolute;
-    right: -6px;
-    bottom: -10px;
-    writing-mode: vertical-rl;
-    font-family: var(--font-display);
-    font-size: 110px;
-    line-height: 0.9;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.08);
-    white-space: nowrap;
-    pointer-events: none;
-  }
-
-  /* Status label relocated between the wordmark and the avatar (JS) */
-  .masthead-hero-row .masthead-date {
-    align-self: center;
-    text-align: center;
-    flex-shrink: 1;
-    margin: 0 8px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .nav-drawer,
-  .nav-overlay,
-  .nav-drawer .drawer-link { transition: none; }
-  body.page-about:not(.is-admin) .scroll-chapter--impact { height: auto; }
-  body.page-about:not(.is-admin) .scroll-chapter__sticky { position: relative; height: auto; padding: 0; }
-  body.page-about:not(.is-admin) .scroll-chapter__shutter { display: none; }
-  body.page-about:not(.is-admin) .scroll-chapter__sticky .section-container { height: auto; }
-  body.page-about:not(.is-admin) .scroll-chapter__heading,
-  body.page-about:not(.is-admin) .scroll-chapter__content {
-    position: relative;
-    inset: auto;
-    opacity: 1;
-    transform: none;
-  }
-  body.page-about:not(.is-admin) .scroll-chapter__content .story-tile__content {
-    -webkit-mask-image: none;
-    mask-image: none;
-    animation: none;
-  }
-}
-
-@media (min-width: 901px) and (max-height: 780px) {
-  body.page-about:not(.is-admin) .scroll-chapter__sticky { padding-block: 20px 16px; }
-  body.page-about:not(.is-admin) .scroll-chapter__content {
-    column-gap: 10px;
-    row-gap: 12px;
-  }
-  body.page-about:not(.is-admin) .scroll-chapter__content .story-tile { padding: 16px 20px; gap: 8px; }
-  body.page-about:not(.is-admin) .scroll-chapter__content .story-headline { font-size: clamp(18px, 1.7vw, 22px); }
-  body.page-about:not(.is-admin) .scroll-chapter__content .story-tile.featured .story-headline { font-size: clamp(24px, 2.2vw, 29px); }
-  body.page-about:not(.is-admin) .scroll-chapter__content .story-kicker {
-    font-size: 9px;
-    letter-spacing: 1.3px;
-  }
-  body.page-about:not(.is-admin) .scroll-chapter__content .story-meta {
-    padding-top: 6px;
-    font-size: 9px;
-    line-height: 1.1;
-    letter-spacing: 1.2px;
-    white-space: nowrap;
-  }
-  body.page-about:not(.is-admin) .scroll-chapter__content .story-deck {
-    display: -webkit-box;
-    overflow: hidden;
-    font-size: 13px;
-    line-height: 1.35;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
   }
 }

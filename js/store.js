@@ -5,6 +5,8 @@
 //   2. localStorage — the admin's local drafts, layered on top of
 //      REMOTE until published. Reset drops drafts back to REMOTE.
 
+import { CONTENT_VERSION, migrateContent, migrateTextMap } from './content-model.js';
+
 const PREFIX = 'cv.v1.';
 
 function key(kind, name) {
@@ -33,7 +35,7 @@ export function currentPage() {
 export async function initStore() {
   try {
     const res = await fetch('data/content.json', { cache: 'no-cache' });
-    if (res.ok) REMOTE = await res.json();
+    if (res.ok) REMOTE = migrateContent(await res.json());
   } catch { REMOTE = null; }
 }
 
@@ -127,13 +129,13 @@ export const store = {
     const variant = this.getActiveVariant();
     const local = localJSON(key('texts', variant + '.' + page))
       ?? (variant === 'default' ? localJSON(key('texts', page)) : undefined);
-    if (local !== undefined) return local || {};
-    return REMOTE?.texts?.[variant]?.[page] ?? {};
+    if (local !== undefined) return migrateTextMap(local);
+    return migrateTextMap(REMOTE?.texts?.[variant]?.[page]);
   },
 
   saveTexts(page, map) {
     const variant = this.getActiveVariant();
-    localStorage.setItem(key('texts', variant + '.' + page), JSON.stringify(map));
+    localStorage.setItem(key('texts', variant + '.' + page), JSON.stringify(migrateTextMap(map)));
   },
 
   /** @returns {string[]|null} block order for a page */
@@ -167,7 +169,7 @@ export const store = {
       that Publish commits to data/content.json. */
   exportSnapshot() {
     const snap = {
-      version: 1,
+      version: CONTENT_VERSION,
       variants: this.getVariants(),
       activeVariant: this.getActiveVariant(),
       collections: structuredClone(REMOTE?.collections ?? {}),
@@ -201,6 +203,6 @@ export const store = {
     const ids = new Set(snap.variants.map(v => v.id));
     Object.keys(snap.collections).forEach(v => { if (!ids.has(v)) delete snap.collections[v]; });
     Object.keys(snap.texts).forEach(v => { if (!ids.has(v)) delete snap.texts[v]; });
-    return snap;
+    return migrateContent(snap);
   },
 };

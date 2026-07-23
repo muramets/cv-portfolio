@@ -1,13 +1,17 @@
 // Admin mode: inline editing, add/delete entities, toolbar.
 // Initialized ONLY when auth.isAdmin() — public visitors never load this UI.
 
-import { ENTITY_TYPES } from './entities.js?v=42';
-import { store, currentPage } from './store.js?v=42';
-import { renderCollection, getItems, applyTexts } from './render.js?v=42';
-import { logout } from './auth.js?v=42';
-import { makeSortable, createHandle } from './dnd.js?v=42';
+import { ENTITY_TYPES } from './entities.js';
+import { store, currentPage } from './store.js';
+import { renderCollection, getItems, applyTexts } from './render.js';
+import { logout } from './auth.js';
+import { makeSortable, createHandle } from './dnd.js';
+import { sanitizeHtml } from './sanitize-html.js';
+import { createAdminToolbar } from './admin/toolbar.js';
+import { publishContent } from './admin/publisher.js';
 
 let pageState = null; // { name: { container, items } }
+let toolbar = null;
 
 function findEntity(name, id) {
   return pageState[name].items.find(e => e.id === id);
@@ -172,7 +176,7 @@ function removeOutro(node) {
 function cleanHTML(node) {
   const clone = node.cloneNode(true);
   clone.querySelectorAll('.drag-handle, .entity-delete, .entity-gradcap-toggle').forEach(el => el.remove());
-  return clone.innerHTML;
+  return sanitizeHtml(clone.innerHTML);
 }
 
 /* ── Footer lines ─────────────────────────────────────────────
@@ -794,90 +798,17 @@ function isEditing() {
 function setEditing(on) {
   localStorage.setItem(EDITING_KEY, on ? '1' : '0');
   document.body.classList.toggle('is-admin', on);
-  const btn = document.querySelector('.admin-toggle');
-  if (btn) {
-    btn.textContent = on ? 'Editing: On' : 'Editing: Off';
-    btn.classList.toggle('is-on', on);
-  }
-  document.querySelector('.admin-toolbar')?.classList.toggle('is-collapsed', !on);
+  toolbar?.setEditing(on);
 }
 
 function injectToolbar() {
-  const bar = document.createElement('div');
-  bar.className = 'admin-toolbar';
-  bar.innerHTML = `
-    <span class="admin-dot"></span>
-    <span>Admin</span>
-    <button class="admin-toggle" title="Toggle edit mode on/off"></button>
-    <button class="admin-publish" title="Commit drafts to GitHub — visible to everyone in ~1 min">Publish</button>
-    <button class="admin-pdf" title="Print / save the active persona as PDF (Cmd+P)">Save PDF</button>
-    <button class="admin-reset" title="Discard local drafts, back to published content">Reset</button>
-    <button class="admin-exit" title="Leave admin entirely (return via ?admin=on)">Log out</button>
-  `;
-  bar.querySelector('.admin-toggle').addEventListener('click', () => setEditing(!isEditing()));
-  bar.querySelector('.admin-publish').addEventListener('click', publish);
-  bar.querySelector('.admin-pdf').addEventListener('click', () => window.print());
-  bar.querySelector('.admin-reset').addEventListener('click', () => {
-    store.resetAll();
-    location.reload();
+  toolbar = createAdminToolbar({
+    onToggle: () => setEditing(!isEditing()),
+    onPublish: button => publishContent({ button, snapshot: () => store.exportSnapshot() }),
+    onPrint: () => window.print(),
+    onReset: () => { store.resetAll(); location.reload(); },
+    onLogout: logout,
   });
-  bar.querySelector('.admin-exit').addEventListener('click', logout);
-  document.body.append(bar);
-}
-
-/* ── Publish: commit drafts to data/content.json on GitHub ──── */
-
-const REPO_API = 'https://api.github.com/repos/muramets/muramets.github.io/contents/data/content.json';
-const TOKEN_KEY = 'cv.v1.gh-token';
-
-async function publish() {
-  const btn = document.querySelector('.admin-publish');
-
-  let token = localStorage.getItem(TOKEN_KEY);
-  if (!token) {
-    token = prompt(
-      'GitHub token to publish (fine-grained, this repo only, ' +
-      'permission "Contents: read & write"). Stored in this browser.');
-    if (!token) return;
-    localStorage.setItem(TOKEN_KEY, token.trim());
-    token = token.trim();
-  }
-
-  btn.textContent = 'Publishing…';
-  btn.disabled = true;
-
-  try {
-    const headers = {
-      Authorization: 'Bearer ' + token,
-      Accept: 'application/vnd.github+json',
-    };
-    const current = await fetch(REPO_API, { headers }).then(r => r.ok ? r.json() : null);
-
-    const body = JSON.stringify(store.exportSnapshot(), null, 2) + '\n';
-    const res = await fetch(REPO_API, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify({
-        message: 'Publish content from admin',
-        content: btoa(unescape(encodeURIComponent(body))),
-        ...(current?.sha ? { sha: current.sha } : {}),
-      }),
-    });
-
-    if (res.status === 401 || res.status === 403) {
-      localStorage.removeItem(TOKEN_KEY); // bad token — ask again next time
-      throw new Error('token rejected (' + res.status + ')');
-    }
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-
-    btn.textContent = 'Published ✓';
-  } catch (err) {
-    console.error('[publish]', err);
-    btn.textContent = 'Failed — retry';
-  } finally {
-    btn.disabled = false;
-    setTimeout(() => { btn.textContent = 'Publish'; }, 4000);
-  }
 }
 
 /* ── Entry point ───────────────────────────────────────────── */

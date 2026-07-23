@@ -330,6 +330,30 @@
 }
 .admin-authed .deck-toggle { display: none; }
 
+/* Gate lettering is decorative in public mode, but becomes a direct inline
+   field in the editor. It stays outside the scroll scene so it never covers
+   the cards while they are being edited. */
+.admin-authed .scroll-chapter__shutter {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 8px 12px 0;
+  padding: 6px 10px;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 5vw, 52px);
+  font-weight: 400;
+  letter-spacing: 0.015em;
+  line-height: 0.8;
+}
+.admin-authed .scroll-chapter__shutter--left {
+  background: var(--canvas-inverted);
+  color: rgba(255, 255, 255, 0.78);
+}
+.admin-authed .scroll-chapter__shutter--right {
+  background: var(--jelly-mint);
+  color: rgba(0, 0, 0, 0.68);
+}
+.admin-authed .scroll-chapter__shutter-label { display: block; }
+
 /* "+" under a footer line group — admin-only affordance */
 .footer-line-add { display: none; }
 .is-admin .footer-line-add {

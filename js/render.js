@@ -1,9 +1,10 @@
 // Rendering: data → DOM. Pure output, no admin chrome — admin.js decorates
 // rendered entities separately when admin mode is on.
 
-import { ENTITY_TYPES } from './entities.js?v=45';
-import { store, currentPage } from './store.js?v=42';
-import { SEED } from './content.js?v=42';
+import { ENTITY_TYPES } from './entities.js';
+import { store, currentPage } from './store.js';
+import { SEED } from './content.js';
+import { sanitizeHtml } from './sanitize-html.js';
 
 /** Resolve current items for a collection: local override or seed. */
 export function getItems(name) {
@@ -67,6 +68,11 @@ const originalTexts = new Map();
 export function applyTexts() {
   const texts = store.loadTexts(currentPage());
 
+  // Dynamic footer slots belong to the active persona. Remove last persona's
+  // materialized nodes before building this one's list, otherwise a line that
+  // exists only in persona A leaks into persona B.
+  document.querySelectorAll('[data-footer-dynamic]').forEach(node => node.remove());
+
   // Materialize numbered footer lines that exist only in the store —
   // the admin can add footer.<col>.<n> beyond the static markup.
   document.querySelectorAll('[data-footer-col-id]').forEach(col => {
@@ -97,9 +103,13 @@ export function applyTexts() {
 
   document.querySelectorAll('[data-text-id]').forEach(node => {
     const id = node.dataset.textId;
+    if (node.dataset.footerDynamic) {
+      node.innerHTML = sanitizeHtml(texts[id] ?? '');
+      return;
+    }
     if (!originalTexts.has(id)) originalTexts.set(id, node.innerHTML);
     const saved = texts[id];
-    node.innerHTML = saved !== undefined ? saved : originalTexts.get(id);
+    node.innerHTML = saved !== undefined ? sanitizeHtml(saved) : originalTexts.get(id);
   });
 }
 

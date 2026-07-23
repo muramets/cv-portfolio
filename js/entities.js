@@ -4,6 +4,8 @@
 // Adding a future type (article, product card with price, testimonial…)
 // means adding one entry here — render/admin/store logic is generic.
 
+import { sanitizeHtml } from './sanitize-html.js';
+
 let uid = 0;
 export function newId(type) {
   return type + '-' + Date.now().toString(36) + '-' + (uid++);
@@ -12,7 +14,7 @@ export function newId(type) {
 function el(tag, className, html) {
   const node = document.createElement(tag);
   if (className) node.className = className;
-  if (html !== undefined) node.innerHTML = html;
+  if (html !== undefined) node.innerHTML = sanitizeHtml(html);
   return node;
 }
 
