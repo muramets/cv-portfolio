@@ -1,6 +1,8 @@
 // Contact's paper arrival is derived from normal-flow geometry. Journey stays
 // in that same flow: its intro must leave the viewport with the timeline as
 // Contact comes over the sheet. This module has no authority over the fold.
+import { CONTROL_VIEWPORT_RATIO } from './journey/timeline-geometry.js';
+
 const DESKTOP_QUERY = '(min-width: 901px)';
 const HOLD_DEBUG_QUERY = 'journey-hold-debug';
 const CONTACT_SHEET_START_SCALE_X = 0.98;
@@ -22,23 +24,41 @@ const getDocumentTop = node => {
 };
 
 /**
- * How far Contact has settled into its flat, arrived state (0 = full
- * pre-arrival tilt, 1 = flat), purely from current flow geometry. Exported so
- * the fold (journey/index.js) can read Contact's already-rendered perspective
- * at the instant the visitor clicks, instead of snapping it flat.
+ * The viewport Y a settled Contact's top must reach, before Journey has ever
+ * folded: the lower edge of the pinned intro, so Contact goes flat right as
+ * it would start obscuring that heading.
  */
-export function getContactApproachSettle({ contact, intro }) {
-  const contactFlowTop = getDocumentTop(contact) - window.scrollY;
-  // Contact is fully flat by the instant its top reaches the lower edge of
-  // the pinned Journey intro — before it can obscure any of that heading.
+export function getIntroSettleViewportY(intro) {
   const stickyTop = parseFloat(getComputedStyle(intro).top) || 0;
-  const contactSettleTop = stickyTop + intro.offsetHeight;
-  const approachDistance = Math.max(1, window.innerHeight - contactSettleTop);
+  return stickyTop + intro.offsetHeight;
+}
+
+/**
+ * The same threshold once Journey is compact: the fold never lets Contact
+ * travel anywhere near the intro (it deliberately stops at the control's
+ * mid-viewport anchor — see CONTROL_VIEWPORT_RATIO), so measuring against the
+ * intro there would leave this formula permanently short of 1. Reusing the
+ * fold's own anchor ratio keeps the two in agreement instead of drifting.
+ */
+export function getCompactSettleViewportY() {
+  return window.innerHeight * CONTROL_VIEWPORT_RATIO;
+}
+
+/**
+ * How far Contact has settled into its flat, arrived state (0 = full
+ * pre-arrival tilt, 1 = flat), purely from current flow geometry against the
+ * given threshold. Exported so the fold (journey/index.js) can read Contact's
+ * already-rendered perspective at the instant the visitor clicks, instead of
+ * snapping it flat.
+ */
+export function getContactApproachSettle({ contact, settleViewportY }) {
+  const contactFlowTop = getDocumentTop(contact) - window.scrollY;
+  const approachDistance = Math.max(1, window.innerHeight - settleViewportY);
   const linearProgress = Math.max(0, Math.min(1,
     (window.innerHeight - contactFlowTop) / approachDistance,
   ));
   // Ease out quickly so `Get in Touch` becomes readable soon after entry,
-  // with the exact final pixels resolved at the pinned-intro handoff.
+  // with the exact final pixels resolved at the settle threshold.
   return 1 - Math.pow(1 - linearProgress, 1.6);
 }
 
@@ -137,7 +157,12 @@ export function initJourneyContactHold() {
   const renderContactSheetPerspective = () => {
     // Measure flow geometry, not getBoundingClientRect(): the latter already
     // includes this transform and would make the progress feed back on itself.
-    const settle = getContactApproachSettle({ contact, intro });
+    // The threshold itself depends on Journey's current state: compact once
+    // folded, the tall intro-relative one otherwise — see the two getters.
+    const settleViewportY = document.body.classList.contains('is-journey-compact')
+      ? getCompactSettleViewportY()
+      : getIntroSettleViewportY(intro);
+    const settle = getContactApproachSettle({ contact, settleViewportY });
     document.body.style.setProperty('--contact-sheet-transform', getContactSheetTransform(settle));
   };
 

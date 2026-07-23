@@ -11,10 +11,18 @@ import {
   getFoldScrollLimit,
 } from './timeline-geometry.js';
 import { mountTimelineGlow } from './timeline-glow.js';
-import { getContactApproachSettle, getContactSheetTransform } from '../journey-contact-hold.js';
+import {
+  getContactApproachSettle,
+  getContactSheetTransform,
+  getIntroSettleViewportY,
+} from '../journey-contact-hold.js';
 
 const REVEAL_DURATION_MS = 520;
 const FOLD_DURATION_MS = 1500;
+// How long the CSS bridges the one discrete jump between the fold's frozen,
+// flat Contact pixels and whatever the native scroll-linked perspective
+// already computed in the background while frozen. See releaseFoldedPresentation.
+const CONTACT_RELEASE_TRANSITION_MS = 320;
 // Longest dissolve edge trailing the clipping boundary. It is only ever this
 // tall while roles are still being eaten; it shrinks to zero as the list
 // reaches its compact height, so the three surviving roles are never masked.
@@ -289,7 +297,12 @@ export function mountJourneyTimeline({
     // eases it the rest of the way to flat (see animateCollapse).
     if (contact) {
       const seam = getFoldSeamMetrics();
-      foldContactStartSettle = introEl ? getContactApproachSettle({ contact, intro: introEl }) : 1;
+      // A fold always starts from the tall, pre-fold Journey (it is what's
+      // being folded away), so the intro-relative threshold is the correct
+      // one here regardless of how a *previous* fold left is-journey-compact.
+      foldContactStartSettle = introEl
+        ? getContactApproachSettle({ contact, settleViewportY: getIntroSettleViewportY(introEl) })
+        : 1;
       contact.style.setProperty('--contact-fold-entry-transform', getContactSheetTransform(foldContactStartSettle));
       contact.style.setProperty('--journey-fold-contact-seam-shift', `${seam.contactSeamShift.toFixed(3)}px`);
     }
@@ -352,12 +365,31 @@ export function mountJourneyTimeline({
     clearFoldedPresentationIntent?.();
     clearFoldedPresentationIntent = null;
     document.body.classList.remove('is-journey-folded');
+    // Contact's native scroll-linked perspective (journey-contact-hold.js) has
+    // kept computing quietly in the background the whole time, from the
+    // compact anchor's actual geometry — which usually isn't flat, since that
+    // anchor sits mid-viewport rather than at the fully-settled threshold. It
+    // was simply masked by the frozen fold pixels. Removing the mask now
+    // exposes that value in one discrete step; bridge it with a short
+    // transition instead of letting the perspective pop in.
+    if (contact) {
+      document.body.classList.add('is-journey-fold-releasing');
+      window.setTimeout(() => {
+        document.body.classList.remove('is-journey-fold-releasing');
+      }, CONTACT_RELEASE_TRANSITION_MS);
+    }
     releaseJourneyPresentation();
   }
 
   function retainFoldedPresentationUntilIntent() {
     clearFoldedPresentationIntent?.();
     document.body.classList.add('is-journey-folded');
+    // Unlike is-journey-folded (released on the visitor's next scroll), this
+    // one persists: journey-contact-hold.js's arrival tilt is measured
+    // against the intro's settle threshold, which the compact composition's
+    // mid-viewport anchor never actually reaches. Past this point Contact
+    // stays flat for good — there is no more "arriving" left to animate.
+    document.body.classList.add('is-journey-compact');
 
     // Do not immediately re-enable the view timelines: Lenis still has the
     // fold's final coordinate in flight, which would replay both entries for
@@ -642,6 +674,9 @@ export function mountJourneyTimeline({
     // explicit expansion is also a valid handoff back to normal scroll
     // presentation.
     releaseFoldedPresentation();
+    // Journey is tall again and Contact is back off-screen below it, so its
+    // natural arrival tilt (journey-contact-hold.js) is meaningful again.
+    document.body.classList.remove('is-journey-compact');
     const previousCount = visibleCount;
     const fromHeight = reducedMotion ? 0 : list.offsetHeight;
     const contextRole = items[previousCount - 1];
@@ -809,7 +844,7 @@ export function mountJourneyTimeline({
       list.style.removeProperty('--timeline-collapse-fade');
       releaseFoldedPresentation();
       restoreNativeScrollBehavior();
-      document.body.classList.remove('is-journey-collapsing', 'is-timeline-folding');
+      document.body.classList.remove('is-journey-collapsing', 'is-timeline-folding', 'is-journey-compact');
     },
   };
 }

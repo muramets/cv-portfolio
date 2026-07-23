@@ -2,7 +2,11 @@
 // viewport height. ~0.48 places the Journey→Contact seam near the vertical
 // centre: the last compact role shows only its tail above the fold, and Get in
 // Touch is already arriving below — the deliberate compact composition.
-const CONTROL_VIEWPORT_RATIO = 0.48;
+// Exported: journey-contact-hold.js reuses this exact ratio as Contact's
+// "fully arrived" threshold once Journey is compact, so its natural
+// scroll-linked settle formula agrees with where the fold actually rests
+// Contact instead of measuring against the tall, pre-fold intro geometry.
+export const CONTROL_VIEWPORT_RATIO = 0.48;
 
 /**
  * Measure the compact destination without changing the rendered state. The

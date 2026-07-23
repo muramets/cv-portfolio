@@ -426,6 +426,16 @@ body.page-about.is-journey-folded:not(.is-admin) #contact {
     translateY(var(--journey-fold-contact-seam-shift, 0px));
 }
 
+/* Bridges the one moment the fold's frozen flat pixels hand back to Contact's
+   native scroll-linked perspective (see releaseFoldedPresentation in
+   index.js): that perspective was already computing quietly in the
+   background from the compact anchor's real geometry, which usually isn't
+   flat. Scoped to this short-lived class only, so ordinary scroll-driven
+   updates keep tracking the pointer 1:1 with no added lag. */
+body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
+  transition: transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
 .section-container {
   max-width: var(--container);
   margin: 0 auto;
