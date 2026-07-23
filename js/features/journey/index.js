@@ -215,9 +215,22 @@ export function mountJourneyTimeline({
       };
       const fallback = window.setTimeout(finish, REVEAL_DURATION_MS + 100);
       list.addEventListener('transitionend', onTransitionEnd);
+      // The browser drives `height` itself once the transition starts below;
+      // Lenis only learns the page grew from its own ResizeObserver, which
+      // lags a frame or more behind the live box. A scroll attempted mid-
+      // reveal can hit Lenis's stale, pre-growth ceiling and feel like
+      // resistance until it catches up on its own. Keep it reading fresh
+      // bounds every frame the box is actually animating, the same way the
+      // fold's own per-frame scroll writes already do.
+      const syncLenisWhileGrowing = () => {
+        if (settled) return;
+        getLenis()?.resize?.();
+        requestAnimationFrame(syncLenisWhileGrowing);
+      };
       requestAnimationFrame(() => requestAnimationFrame(() => {
         list.style.transition = `height ${REVEAL_DURATION_MS}ms ${MOTION_CURVE}`;
         list.style.height = `${toHeight}px`;
+        syncLenisWhileGrowing();
       }));
     });
   }
