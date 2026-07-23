@@ -103,10 +103,6 @@ export function mountJourneyTimeline({
   const originalLayoutFoldTransformPriority = section.style.getPropertyPriority('--journey-fold-layout-transform');
   const originalLayoutFoldOpacity = section.style.getPropertyValue('--journey-fold-layout-opacity');
   const originalLayoutFoldOpacityPriority = section.style.getPropertyPriority('--journey-fold-layout-opacity');
-  const originalSheetFoldTilt = section.style.getPropertyValue('--journey-fold-tilt');
-  const originalSheetFoldTiltPriority = section.style.getPropertyPriority('--journey-fold-tilt');
-  const originalSheetFoldDepth = section.style.getPropertyValue('--journey-fold-depth');
-  const originalSheetFoldDepthPriority = section.style.getPropertyPriority('--journey-fold-depth');
 
   const glow = mountTimelineGlow({
     surface: timelineSurface,
@@ -293,11 +289,6 @@ export function mountJourneyTimeline({
     const sheetStyle = getComputedStyle(section);
     section.style.setProperty('--journey-fold-sheet-transform', sheetStyle.transform);
     section.style.setProperty('--journey-fold-sheet-opacity', sheetStyle.opacity);
-    // The fold's own tilt/depth start from flat on top of the frozen entry
-    // frame above, so frame zero of the fold reads identical to the pixels
-    // that were already on screen the instant before the class was added.
-    section.style.setProperty('--journey-fold-tilt', '0deg');
-    section.style.setProperty('--journey-fold-depth', '0px');
     if (layout) {
       const layoutStyle = getComputedStyle(layout);
       section.style.setProperty('--journey-fold-layout-transform', layoutStyle.transform);
@@ -346,18 +337,6 @@ export function mountJourneyTimeline({
       originalLayoutFoldOpacity,
       originalLayoutFoldOpacityPriority,
     );
-    restoreFoldProperty(
-      section,
-      '--journey-fold-tilt',
-      originalSheetFoldTilt,
-      originalSheetFoldTiltPriority,
-    );
-    restoreFoldProperty(
-      section,
-      '--journey-fold-depth',
-      originalSheetFoldDepth,
-      originalSheetFoldDepthPriority,
-    );
     if (contact) {
       restoreFoldProperty(
         contact,
@@ -379,12 +358,13 @@ export function mountJourneyTimeline({
     clearFoldedPresentationIntent = null;
     document.body.classList.remove('is-journey-folded');
     // Contact's native scroll-linked perspective (journey-contact-hold.js) has
-    // kept computing quietly in the background the whole time, from the
-    // compact anchor's actual geometry — which usually isn't flat, since that
-    // anchor sits mid-viewport rather than at the fully-settled threshold. It
-    // was simply masked by the frozen fold pixels. Removing the mask now
-    // exposes that value in one discrete step; bridge it with a short
-    // transition instead of letting the perspective pop in.
+    // kept computing quietly in the background the whole time, and — now that
+    // it measures against the same compact anchor the fold itself used (see
+    // is-journey-compact / getCompactSettleViewportY) — it should already
+    // agree with the frozen fold pixels being unmasked here. This transition
+    // is the safety net for the residual sub-pixel cases where it doesn't
+    // (a resize between fold and release, rounding, …), not a fix for a
+    // routine mismatch.
     if (contact) {
       document.body.classList.add('is-journey-fold-releasing');
       window.setTimeout(() => {
@@ -622,8 +602,12 @@ export function mountJourneyTimeline({
       debug.startedAt = performance.now();
       debug.plan = { ...plan, startScroll: Math.round(startScroll) };
       window.dispatchEvent(new CustomEvent('journeyfolddebugstart', { detail: debug.plan }));
+      // foldStartSeam only ever feeds recordDebugFrame's drift metrics below —
+      // skip its getBoundingClientRect()/offsetTop walk entirely for the
+      // common case (no ?journey-debug), instead of paying for it on every
+      // real visitor's fold.
+      foldStartSeam = getFoldSeamMetrics();
     }
-    foldStartSeam = getFoldSeamMetrics();
     list.classList.add('is-resizing');
     list.style.height = `${plan.expandedHeight}px`;
     list.style.overflow = 'hidden';

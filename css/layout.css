@@ -428,10 +428,11 @@ body.page-about.is-journey-folded:not(.is-admin) #contact {
 
 /* Bridges the one moment the fold's frozen flat pixels hand back to Contact's
    native scroll-linked perspective (see releaseFoldedPresentation in
-   index.js): that perspective was already computing quietly in the
-   background from the compact anchor's real geometry, which usually isn't
-   flat. Scoped to this short-lived class only, so ordinary scroll-driven
-   updates keep tracking the pointer 1:1 with no added lag. */
+   index.js). The two should already agree by then — journey-contact-hold.js
+   measures against the same compact anchor the fold used — so this is a
+   safety net for residual sub-pixel drift, not a fix for a routine jump.
+   Scoped to this short-lived class only, so ordinary scroll-driven updates
+   keep tracking the pointer 1:1 with no added lag. */
 body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
   transition: transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
@@ -854,19 +855,8 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
       animation: none;
     }
 
-    /* The fold's own perspective reuses the entry hinge — same
-       perspective(1800px) depth and the same 50% 100% (bottom edge) origin
-       set on .section--journey above — instead of a second, unrelated 3D
-       treatment. The frozen entry transform stays the base frame; the
-       tilt/depth pair is written every fold rAF, rising and returning to
-       flat by the last frame. That return-to-flat is what lets cleanup
-       delete the variables afterwards without a visible reset, and what
-       keeps the last rendered frame matching the flat compact DOM. */
     body.page-about.is-journey-collapsing:not(.is-admin) .section--journey {
-      transform: var(--journey-fold-sheet-transform, none)
-        perspective(1800px)
-        translateZ(var(--journey-fold-depth, 0px))
-        rotateX(var(--journey-fold-tilt, 0deg));
+      transform: var(--journey-fold-sheet-transform, none);
       opacity: var(--journey-fold-sheet-opacity, 1);
     }
 

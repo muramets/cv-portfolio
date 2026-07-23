@@ -270,13 +270,6 @@
   );
 }
 
-/* In the final card's lower fade, the light passes above the disappearing
-   paper surface. This is a second, masked view of the same cursor field — it
-   begins around the bullets and never affects the readable part of the card. */
-.timeline-list.has-fade::after {
-  display: none;
-}
-
 .timeline-item {
   display: grid;
   grid-template-columns: 220px 1fr;
@@ -286,7 +279,6 @@
   z-index: 1;
 }
 
-/* A cursor field creates a dimensional, timeline-only waypoint corridor. */
 /* A cursor field creates a dimensional, timeline-only waypoint corridor. */
 .journey-layout__timeline {
   position: relative;
