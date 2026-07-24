@@ -3,7 +3,7 @@
 // Scoped to about.html only for now — no cross-page persistence yet.
 
 const TRACK_SRC = 'assets/audio/jesus-walks.mp3';
-const TARGET_VOLUME = 0.15;
+const TARGET_VOLUME = 0.20;
 // Starting the ramp at 0 reads as a long dead-silence beat before anything
 // happens — sound should be there the instant playback starts, then ease
 // up to the target level rather than fading in from nothing.
@@ -87,6 +87,7 @@ export function initVibePlayer() {
 
   const audio = new Audio(TRACK_SRC);
   audio.preload = 'metadata';
+  audio.volume = INTRO_VOLUME;
 
   let audioCtx = null;
   let gainNode = null;
@@ -117,7 +118,9 @@ export function initVibePlayer() {
       const step = now => {
         if (token !== fadeToken) return resolve();
         const x = Math.min((now - start) / duration, 1);
-        if (gainNode) gainNode.gain.value = from + (to - from) * ease(x);
+        const currentVal = Math.max(0, Math.min(1, from + (to - from) * ease(x)));
+        if (gainNode) gainNode.gain.value = currentVal;
+        audio.volume = currentVal;
         if (x < 1) requestAnimationFrame(step);
         else resolve();
       };
