@@ -114,13 +114,13 @@ export function mountJourneyTimeline({
     return node.id;
   }
 
-  function setControlState() {
+  function setControlState(displayCount = visibleCount) {
     const isFolding = phase === JOURNEY_PHASE.COLLAPSING;
     control.disabled = isFolding;
     control.setAttribute('aria-busy', String(isFolding));
     control.classList.toggle('is-folding', isFolding);
-    control.setAttribute('aria-expanded', String(visibleCount >= items.length));
-    control.textContent = getTimelineControlLabel(visibleCount, items.length, isFolding);
+    control.setAttribute('aria-expanded', String(displayCount >= items.length));
+    control.textContent = getTimelineControlLabel(displayCount, items.length, isFolding);
   }
 
   function clearReturnCue(role, resetVisual = false) {
@@ -695,9 +695,11 @@ export function mountJourneyTimeline({
     // natural arrival tilt (journey-contact-hold.js) is meaningful again.
     document.body.classList.remove('is-journey-compact');
     const previousCount = visibleCount;
+    const nextCount = getNextVisibleCount(visibleCount, items.length);
     const fromHeight = reducedMotion ? 0 : list.offsetHeight;
     const contextRole = items[previousCount - 1];
-    visibleCount = getNextVisibleCount(visibleCount, items.length);
+
+    setControlState(previousCount);
 
     if (!reducedMotion) {
       list.classList.add('is-resizing');
@@ -705,7 +707,8 @@ export function mountJourneyTimeline({
       list.style.overflow = 'hidden';
     }
 
-    revealItems(previousCount, visibleCount);
+    revealItems(previousCount, nextCount);
+    visibleCount = nextCount;
     list.classList.toggle('has-fade', visibleCount < items.length);
     updateRailFade();
     if (reducedMotion) {

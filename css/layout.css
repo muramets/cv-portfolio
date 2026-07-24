@@ -821,10 +821,7 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
   body.page-about:not(.is-admin) .vibe-gate-btn {
     display: flex;
     align-items: center;
-    /* Flush to the "01" label's own left inset, so the two read as one
-       composed block instead of two independently placed elements. */
     justify-content: flex-start;
-    gap: 8px;
     position: absolute;
     z-index: 5;
     top: 62%;
@@ -832,9 +829,6 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
     width: 38%;
     padding: 0 8px 0 clamp(22px, 2.6vw, 48px);
     transform: translateX(106%);
-    /* Scale from the exact optical center of the "icon + text" block
-       (inset padding + 103px center of the combined dot and label),
-       so the icon expands evenly without sliding horizontally. */
     transform-origin: calc(clamp(22px, 2.6vw, 48px) + 103px) 50%;
     background: none;
     border: 0;
@@ -850,6 +844,8 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
     justify-content: flex-start;
     gap: 8px;
     width: 100%;
+    height: 100%;
+    box-sizing: border-box;
     transform-origin: calc(clamp(22px, 2.6vw, 48px) + 103px) 50%;
     will-change: transform, opacity;
   }
@@ -858,24 +854,23 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
     opacity: 1;
   }
 
-  /* Icon wrapper is the actual flex item (fixed 22px slot); the ring and
-     the dot both live inside it as its own children, positioned relative
-     to this small shared box rather than the button's full height — that's
-     what keeps them perfectly concentric regardless of the button's own
-     padding/line-height, and lets the dot scale on hover without dragging
-     the ring's radius along with it (a sibling, not a ::before, is never
-     painted inside the dot's own transform). */
   body.page-about:not(.is-admin) .vibe-gate-btn__icon {
     position: relative;
     width: 22px;
     height: 22px;
-    flex: none;
+    min-width: 22px;
+    min-height: 22px;
+    flex: 0 0 22px;
   }
 
   body.page-about:not(.is-admin) .vibe-gate-btn__ring {
     position: absolute;
     z-index: -1;
-    inset: -6px;
+    top: -6px;
+    left: -6px;
+    width: 34px;
+    height: 34px;
+    box-sizing: border-box;
     border-radius: 50%;
     border: 1px solid rgba(82, 0, 255, 0.3);
     animation: vibe-ring-pulse 2600ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
