@@ -75,11 +75,11 @@
             "title": "Career Break",
             "company": "<div>Independent</div><div>Remote</div>",
             "period": "07/2025 — 07/2026",
-            "deck": "Stepped away and autonomously built where my experience pointed — and watched the map open up with every project. What I found: my track record is a toolkit, not a destination. And the place where the whole toolkit works at once is music.",
+            "deck": "Stepped away and autonomously built where my experience pointed — and watched the map open up with every project. What I found: my track record is a toolkit, not a destination. And the place where the whole toolkit works at once is in making good music get heard and artists get paid.",
             "bullets": [
               "Built HackTube — a full-cycle production studio for BGM YouTube videos: find the idea, edit, render — inside YouTube's native UI, because&nbsp;the best onboarding is the one the user already finished.",
               "Built MonkeyLearn — a coaching platform that turns skill-building into routine actions with clear instructions. When you can see the path, you don't lose the goal.",
-              "Launched and monetized a BGM YouTube channel in the Slow Life Piano niche, plus a series of smaller projects exploring what a modern artist's creative process needs today — from reels to community building."
+              "&nbsp;Launched and monetized a BGM YouTube channel in the Slow Life Piano niche, plus a series of smaller projects exploring what a modern artist's creative process needs today — from reels to community building."
             ]
           }
         },
@@ -148,7 +148,7 @@
           "type": "role",
           "fields": {
             "title": "Technical Lead",
-            "company": "TheSoul Publishing<br>Kazan, Rusiia",
+            "company": "TheSoul Publishing<br>Kazan, Russia",
             "period": "04/2020 — 07/2021",
             "deck": "The filming teams' quality-of-life department — and the producer's right hand on day-to-day operations.",
             "bullets": [
@@ -185,8 +185,7 @@
               "Practice showed me that law isn't my passion — in a music setting it kind of is, but as a supporting role, not the lead (a note from today).",
               "Played the cards I had by a simple rule: better odds starting the search for myself in the creative field than in any legal job I was ready to see back then.",
               "Graduated with honors."
-            ],
-            "gradCap": true
+            ]
           }
         },
         {
@@ -201,8 +200,7 @@
               "One seminar stuck with me: the Pussy Riot case was unfolding, and we spent the whole class playing the state — building the legal case for the prosecution while the professor took it apart point by point, showing us why the case was political. I didn't see this class this way back then, but do now.",
               "My first real immersion into an environment that was genuinely interesting — just not my waters. I ran on default mode: executing for grades rather than for knowledge.",
               "Graduated with honors."
-            ],
-            "gradCap": true
+            ]
           }
         }
       ],
@@ -233,11 +231,11 @@
         "footer.skills.1": "Just show me your art. Let's talk.",
         "footer.skills.2": "Let's find out how to get it paid.",
         "footer.skills.3": "I built a training program for the skills a pro artist should have.",
-        "footer.skills.4": "I build martketing and promo strategies with execution level.",
+        "footer.skills.4": "I build marketing and promo strategies with execution layer.",
         "footer.domains.2": "Business Intelligence",
         "footer.domains.3": "Workflow Automation",
         "footer.domains.4": "Inventory &amp; Sales Operations",
-        "about.kicker": "Product Management · OPERATIONS&nbsp;<span style=\"letter-spacing: 1.8px;\">·</span>&nbsp;Music Tech&nbsp;· Cyprus",
+        "about.kicker": "Product Management · OPERATIONS&nbsp;<span style=\"letter-spacing: 1.8px;\">·</span>&nbsp;Music Tech&nbsp;· COACHING · Cyprus",
         "about.achievements.subtitle": "The industry speaks in numbers, so here are mine. I'd like to think I'm more than that.",
         "about.experience.subtitle": "The roles I've played so far.",
         "footer.skills.title": "IF YOU ARE FROM THE STREET",
