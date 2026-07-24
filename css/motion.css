@@ -18,9 +18,35 @@
 .vnav              { view-transition-name: site-nav; }
 .footer            { view-transition-name: site-footer; }
 
+/* Admin's chrome isn't the same shape on arrival as it will be a moment
+   later: the persona toggle injects into .vnav only after js/admin.js
+   finishes loading, well after the browser has already captured the
+   incoming page's view-transition snapshot. Morphing the named group
+   against a snapshot that's about to change under it doesn't remove the
+   pop-in, it just relocates it into the middle of the transition. Falling
+   back to the plain root fade (below) reads better than an animated group
+   morph that visibly changes shape right after landing. The is-admin-shell
+   flag is set synchronously in <head>, from localStorage, before first
+   paint — see the inline script there. */
+html.is-admin-shell .site-header--band,
+html.is-admin-shell .vnav {
+  view-transition-name: none;
+}
+
 ::view-transition-group(*) {
   animation-duration: 300ms;
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* `html`'s own background-color is the dark canvas kept only to feed
+   Safari's toolbar tint (see base.css) — it was never meant to be visible.
+   The root crossfade's old/new snapshots are two overlapping semi-transparent
+   layers for part of the animation, and without an opaque backing of their
+   own that partial coverage let that dark background bleed through as a
+   flash, most visible where admin's un-named header (above) now crossfades
+   through colored band headers instead of morphing as its own opaque group. */
+::view-transition-group(root) {
+  background-color: var(--canvas);
 }
 
 /* Content: quiet fade-out, incoming page fades in with a subtle lift */

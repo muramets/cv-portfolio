@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <!-- Synchronous and first: the admin persona toggle injects into .vnav
+       asynchronously (after js/admin.js loads), too late for the browser's
+       cross-document view-transition snapshot of the incoming page. Flagging
+       admin here, before any paint, lets motion.css opt .vnav out of the
+       named morph for these sessions instead of animating against a soon-
+       stale snapshot (see the is-admin-shell rule there). -->
+  <script>if (localStorage.getItem('cv.v1.admin') === '1') document.documentElement.classList.add('is-admin-shell');</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#131313">
   <title>Collabs — Ilia Blinov</title>
@@ -13,11 +20,11 @@
   <link rel="stylesheet" href="css/layout.css?v=108">
   <link rel="stylesheet" href="css/site-chrome.css?v=4">
   <link rel="stylesheet" href="css/components.css?v=78">
-  <link rel="stylesheet" href="css/motion.css?v=44">
+  <link rel="stylesheet" href="css/motion.css?v=50">
   <link rel="stylesheet" href="css/admin.css?v=44">
   <link rel="stylesheet" href="css/print.css?v=46" media="print">
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
-  <script type="module" src="js/main.js?v=103" blocking="render"></script>
+  <script type="module" src="js/main.js?v=106" blocking="render"></script>
 </head>
 <body>
 

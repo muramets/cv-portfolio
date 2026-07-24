@@ -66,6 +66,19 @@ const scrollFeedback = initScrollInteractionFeedback();
 safe(initImpactGateFallback);
 safe(initLenisScroll, scrollFeedback);
 
+// Public chrome — nav, kicker, mobile drawer, contact form, section bar —
+// is identical for admin and visitors, so it must never wait on the admin
+// bundle below. `await import('./admin.js')` plus initAdmin's own DOM work
+// was blocking all of this, which on every admin page navigation flashed
+// the nav (and, once loaded, the persona toggle it injects into it) out for
+// as long as that import took to resolve.
+safe(initContactForm);
+safe(initMobileNav);
+safe(initSectionBar, { getLenis: () => lenisInstance, duration: ANCHOR_SCROLL_DURATION, easing: anchorScrollEasing });
+safe(placeStatusForMobile);
+safe(placeKickerInNav);
+safe(initLinkedInModal);
+
 if (isAdmin()) {
   const { initAdmin } = await import('./admin.js');
   initAdmin(pageState);
@@ -76,12 +89,6 @@ if (isAdmin()) {
   safe(initJourneyContactHold);
 }
 
-safe(initContactForm);
-safe(initMobileNav);
-safe(initSectionBar, { getLenis: () => lenisInstance, duration: ANCHOR_SCROLL_DURATION, easing: anchorScrollEasing });
-safe(placeStatusForMobile);
-safe(placeKickerInNav);
-safe(initLinkedInModal);
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 
 function initLenisScroll(scrollFeedback) {
