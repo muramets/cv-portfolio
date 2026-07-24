@@ -844,6 +844,16 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
     transition: opacity 220ms ease;
   }
 
+  body.page-about:not(.is-admin) .vibe-gate-btn__inner {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    transform-origin: calc(clamp(22px, 2.6vw, 48px) + 103px) 50%;
+    will-change: transform, opacity;
+  }
+
   body.page-about:not(.is-admin) .vibe-gate-btn:hover {
     opacity: 1;
   }

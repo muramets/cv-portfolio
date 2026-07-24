@@ -83,39 +83,47 @@ export function initVibePlayer() {
 
   alignGateLabelToButton(gateBtn);
 
-  const audio = new Audio(TRACK_SRC);
-  // iOS Safari ignores HTMLMediaElement.volume entirely (it's tied to the
-  // hardware buttons there) — every fade below runs through a Web Audio
-  // GainNode instead, which iOS does respect. The node can only be created
-  // once, and only inside a user gesture, so it's built lazily on first tap.
-  audio.preload = 'metadata';
-
+  // Web Audio graph setup: iOS Safari ignores HTMLMediaElement.volume entirely.
+  // Using AudioBufferSourceNode connected to a GainNode guarantees volume
+  // control and fading work 100% on iOS Safari/iPad as well as desktop browsers.
   let audioCtx = null;
   let gainNode = null;
-  const ensureAudioGraph = () => {
-    if (gainNode) return;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const source = audioCtx.createMediaElementSource(audio);
-    gainNode = audioCtx.createGain();
-    gainNode.gain.value = 0;
-    source.connect(gainNode).connect(audioCtx.destination);
+  let audioBuffer = null;
+  let rawArrayBuffer = null;
+  let sourceNode = null;
+  let isPlaying = false;
+  let isPaused = false;
+  let startAudioTime = 0;
+  let pauseOffset = 0;
+  let fadeToken = 0;
+  let fadingOut = false;
+
+  const loadAudioBuffer = () => {
+    if (rawArrayBuffer) return Promise.resolve(rawArrayBuffer);
+    return fetch(TRACK_SRC)
+      .then(res => res.arrayBuffer())
+      .then(buffer => {
+        rawArrayBuffer = buffer;
+        return buffer;
+      })
+      .catch(() => null);
   };
 
-  // Loading only starts on tap otherwise (preload="none" territory), which
-  // on a slow link is exactly the "button feels laggy" delay reported on
-  // iPad — the tap itself is instant, but audio.play() sits waiting on the
-  // network for a beat first. Buffering ahead of time once the gate is
-  // actually in view removes that wait without fetching 6MB for visitors
-  // who never scroll this far.
   const preloadObserver = new IntersectionObserver(entries => {
     if (!entries.some(entry => entry.isIntersecting)) return;
-    audio.preload = 'auto';
-    audio.load();
+    void loadAudioBuffer();
     preloadObserver.disconnect();
   }, { rootMargin: '200% 0px' });
   preloadObserver.observe(gateBtn);
 
-  let fadeToken = 0;
+  const ensureAudioGraph = () => {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = INTRO_VOLUME;
+    gainNode.connect(audioCtx.destination);
+  };
+
   const fadeVolume = (from, to, duration, ease) => {
     const token = ++fadeToken;
     return new Promise(resolve => {
@@ -131,14 +139,6 @@ export function initVibePlayer() {
     });
   };
 
-  let fadingOut = false;
-  audio.addEventListener('timeupdate', () => {
-    if (fadingOut || !Number.isFinite(audio.duration)) return;
-    if (audio.currentTime < audio.duration - VOLUME_FADE_MARGIN_S) return;
-    fadingOut = true;
-    fadeVolume(gainNode ? gainNode.gain.value : TARGET_VOLUME, 0, VOLUME_FADE_MS, fadeOutEase);
-  });
-
   const player = document.createElement('button');
   player.type = 'button';
   player.className = 'vibe-player';
@@ -149,59 +149,88 @@ export function initVibePlayer() {
   `;
   document.body.append(player);
 
-  const setPaused = paused => {
+  const setPlayerState = paused => {
+    isPaused = paused;
     player.classList.toggle('is-paused', paused);
     player.setAttribute('aria-label', paused ? 'Play the track' : 'Pause the track');
+  };
+
+  const playBufferFrom = async (offset = 0) => {
+    ensureAudioGraph();
+    if (audioCtx.state === 'suspended') {
+      await audioCtx.resume();
+    }
+    if (!audioBuffer) {
+      const data = await loadAudioBuffer();
+      if (!data) throw new Error('Audio load failed');
+      audioBuffer = await audioCtx.decodeAudioData(data.slice(0));
+    }
+    if (sourceNode) {
+      try { sourceNode.stop(); } catch {}
+    }
+    sourceNode = audioCtx.createBufferSource();
+    sourceNode.buffer = audioBuffer;
+    sourceNode.connect(gainNode);
+
+    startAudioTime = audioCtx.currentTime - offset;
+    sourceNode.start(0, offset);
+    isPlaying = true;
+    setPlayerState(false);
+
+    sourceNode.onended = () => {
+      const elapsed = audioCtx.currentTime - startAudioTime;
+      if (audioBuffer && elapsed >= audioBuffer.duration - 0.5) {
+        isPlaying = false;
+        pauseOffset = 0;
+        setPlayerState(true);
+      }
+    };
+  };
+
+  const monitorFadeOut = () => {
+    if (!isPlaying || isPaused || fadingOut || !audioBuffer || !audioCtx) return;
+    const elapsed = audioCtx.currentTime - startAudioTime;
+    if (elapsed >= audioBuffer.duration - VOLUME_FADE_MARGIN_S) {
+      fadingOut = true;
+      fadeVolume(gainNode.gain.value, 0, VOLUME_FADE_MS, fadeOutEase);
+    } else {
+      requestAnimationFrame(monitorFadeOut);
+    }
   };
 
   const launch = async () => {
     gateBtn.disabled = true;
     const ring = gateBtn.querySelector('.vibe-gate-btn__ring');
+    const inner = gateBtn.querySelector('.vibe-gate-btn__inner') || gateBtn;
 
-    // The button's resting transform is a scroll-driven CSS animation (it
-    // rides the door's own translateX). Freezing that exact matrix here and
-    // prefixing every keyframe with it means the launch plays from wherever
-    // the door left it, instead of snapping to an untransformed origin.
-    const restingTransform = getComputedStyle(gateBtn).transform;
-    if (restingTransform !== 'none') {
-      gateBtn.style.transform = restingTransform;
-    }
-    gateBtn.style.animation = 'none';
     gateBtn.classList.add('is-launching');
 
-    const prefix = restingTransform === 'none' ? '' : `${restingTransform} `;
-    const at = (y, scale) => `${prefix}translateY(${y}px) scale(${scale})`;
-
-    // ensureAudioGraph() and the resume()/play() calls below must all be
-    // reachable synchronously from this tap for iOS to treat the audio as
-    // gesture-initiated — but the promise itself is awaited later, after
-    // the grow animation, so the tap's visual response never waits on
-    // network/decode latency first.
+    // ensureAudioGraph() and playBufferFrom() start synchronously inside this user gesture.
     ensureAudioGraph();
+    gainNode.gain.value = INTRO_VOLUME;
+
     const audioReady = (async () => {
-      if (audioCtx.state === 'suspended') await audioCtx.resume();
-      audio.currentTime = 0;
-      gainNode.gain.value = INTRO_VOLUME;
-      await audio.play();
+      await playBufferFrom(0);
       fadeVolume(INTRO_VOLUME, TARGET_VOLUME, VOLUME_FADE_MS, fadeInEase);
+      requestAnimationFrame(monitorFadeOut);
     })();
 
-    // Phase 1: grow toward the viewer in place.
-    await gateBtn.animate(
-      [{ transform: at(0, 1) }, { transform: at(0, 1.25) }],
+    const atInner = (y, scale) => `translateY(${y}px) scale(${scale})`;
+
+    // Phase 1: grow toward the viewer in place (animated on inner container so
+    // gateBtn retains its CSS scroll animation without breaking door lockstep).
+    await inner.animate(
+      [{ transform: atInner(0, 1) }, { transform: atInner(0, 1.25) }],
       { duration: 250, easing: ARRIVE_EASE, fill: 'forwards' },
     ).finished;
 
-    // The track is already playing by now — swap the gate icon to pause
-    // before it vanishes, so the handoff to the corner control (which opens
-    // already showing pause) doesn't read as two different play states.
     gateBtn.classList.add('is-playing');
 
     // Phase 2: shrink back into a single point in place.
-    await gateBtn.animate(
+    await inner.animate(
       [
-        { transform: at(0, 1.25), opacity: 1 },
-        { transform: at(0, 0), opacity: 0 },
+        { transform: atInner(0, 1.25), opacity: 1 },
+        { transform: atInner(0, 0), opacity: 0 },
       ],
       { duration: 280, easing: RECEDE_EASE, fill: 'forwards' },
     ).finished;
@@ -209,11 +238,8 @@ export function initVibePlayer() {
     try {
       await audioReady;
     } catch {
-      // Autoplay/decoding refused after all — restore the gate button
-      // instead of handing off to a corner control for a track that never
-      // actually started.
-      gateBtn.style.transform = '';
-      gateBtn.style.animation = '';
+      // Autoplay/decoding refused after all — restore gate button.
+      inner.getAnimations().forEach(anim => anim.cancel());
       gateBtn.classList.remove('is-launching', 'is-playing');
       gateBtn.disabled = false;
       return;
@@ -222,8 +248,7 @@ export function initVibePlayer() {
     gateBtn.style.display = 'none';
     if (ring) ring.style.animation = 'none';
 
-    // Phase 3: the corner control rises into place from the same collapsed
-    // state, arriving with the identical card-style decelerate.
+    // Phase 3: corner control rises into place.
     player.classList.add('is-visible');
     player.animate(
       [
@@ -234,17 +259,18 @@ export function initVibePlayer() {
     );
   };
 
-  gateBtn.addEventListener('click', () => { launch(); }, { once: true });
+  gateBtn.addEventListener('click', () => { void launch(); }, { once: true });
 
   player.addEventListener('click', () => {
-    if (audio.paused) {
-      audio.play();
+    if (!audioCtx) return;
+    if (isPaused) {
+      void playBufferFrom(pauseOffset);
     } else {
-      audio.pause();
+      pauseOffset = Math.max(0, audioCtx.currentTime - startAudioTime);
+      if (sourceNode) {
+        try { sourceNode.stop(); } catch {}
+      }
+      setPlayerState(true);
     }
   });
-
-  audio.addEventListener('play', () => setPaused(false));
-  audio.addEventListener('pause', () => setPaused(true));
-  audio.addEventListener('ended', () => setPaused(true));
 }

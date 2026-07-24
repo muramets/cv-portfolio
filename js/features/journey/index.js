@@ -708,8 +708,8 @@ export function mountJourneyTimeline({
     revealItems(previousCount, visibleCount);
     list.classList.toggle('has-fade', visibleCount < items.length);
     updateRailFade();
-    setControlState();
     if (reducedMotion) {
+      setControlState();
       glow.refresh();
       return;
     }
@@ -719,6 +719,7 @@ export function mountJourneyTimeline({
     setReturnCue(contextRole);
     const targetHeight = list.scrollHeight;
     await animateListHeight(fromHeight, targetHeight);
+    setControlState();
     document.documentElement.style.overflowAnchor = '';
     glow.refresh();
   }
@@ -837,6 +838,7 @@ export function mountJourneyTimeline({
 
   const onControlClick = () => {
     if (destroyed || phase === JOURNEY_PHASE.COLLAPSING) return;
+    control.blur();
     if (visibleCount >= items.length) void collapseToCompact();
     else void revealNextRoles();
   };
