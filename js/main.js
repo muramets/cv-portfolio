@@ -9,6 +9,7 @@ import { initDeckToggle } from './features/deck-toggle.js';
 import { initContactForm } from './features/contact-form.js';
 import { initLinkedInModal, initMobileNav, placeKickerInNav, placeStatusForMobile } from './features/navigation.js';
 import { initSectionBar } from './features/section-bar.js';
+import { initVibePlayer } from './features/vibe-player.js';
 
 const ANCHOR_SCROLL_DURATION = 1.28;
 const isWebKitSafari = /Safari\//.test(navigator.userAgent)
@@ -86,7 +87,8 @@ if (isAdmin()) {
   safe(pruneEmptyNav);
   safe(initDeckToggle);
   safe(mountJourneyTimeline, { getLenis: () => lenisInstance, isWebKitSafari });
-  safe(initJourneyContactHold);
+  initJourneyContactHold();
+  safe(initVibePlayer);
 }
 
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';

@@ -487,6 +487,7 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
 /* About's focus scenes borrow Bodega's principle: keep one physical scroll
    curve, but let a chapter spend distance on a sticky visual composition. */
 .scroll-chapter__shutter { display: none; }
+.vibe-gate-btn { display: none; }
 
 @media (min-width: 901px) {
   body.page-about:not(.is-admin) {
@@ -800,6 +801,183 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
     body.page-about.is-impact-gate-open:not(.is-admin) .scroll-chapter__shutter--right {
       transform: translateX(106%);
     }
+    body.page-about:not(.is-admin) .vibe-gate-btn {
+      transform: translateX(0);
+      transition: transform 900ms cubic-bezier(0.45, 0.05, 0.55, 0.95);
+    }
+    body.page-about.is-impact-gate-open:not(.is-admin) .vibe-gate-btn {
+      transform: translateX(106%);
+    }
+  }
+
+  /* The vibe-track button is a sibling of the doors, not a child — a
+     scroll-driven animation-timeline reads its "cover" range off the box of
+     whichever element it's applied to, and nesting an interactive control
+     inside the animated shutter itself was throwing that range off (the
+     door lost sync with its own wordmark). Instead it's given the exact
+     same width/position as the right (mint) door and the exact same
+     animation (see `impact-shutter-right` below), so the two move in
+     perfect lockstep without one living inside the other. */
+  body.page-about:not(.is-admin) .vibe-gate-btn {
+    display: flex;
+    align-items: center;
+    /* Flush to the "01" label's own left inset, so the two read as one
+       composed block instead of two independently placed elements. */
+    justify-content: flex-start;
+    gap: 8px;
+    position: absolute;
+    z-index: 5;
+    top: 62%;
+    right: 0;
+    width: 38%;
+    padding: 0 8px 0 clamp(22px, 2.6vw, 48px);
+    transform: translateX(106%);
+    /* Scale from the exact optical center of the "icon + text" block
+       (inset padding + 103px center of the combined dot and label),
+       so the icon expands evenly without sliding horizontally. */
+    transform-origin: calc(clamp(22px, 2.6vw, 48px) + 103px) 50%;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: 0.82;
+    transition: opacity 220ms ease;
+  }
+
+  body.page-about:not(.is-admin) .vibe-gate-btn:hover {
+    opacity: 1;
+  }
+
+  /* Icon wrapper is the actual flex item (fixed 22px slot); the ring and
+     the dot both live inside it as its own children, positioned relative
+     to this small shared box rather than the button's full height — that's
+     what keeps them perfectly concentric regardless of the button's own
+     padding/line-height, and lets the dot scale on hover without dragging
+     the ring's radius along with it (a sibling, not a ::before, is never
+     painted inside the dot's own transform). */
+  body.page-about:not(.is-admin) .vibe-gate-btn__icon {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    flex: none;
+  }
+
+  body.page-about:not(.is-admin) .vibe-gate-btn__ring {
+    position: absolute;
+    z-index: -1;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid rgba(82, 0, 255, 0.3);
+    animation: vibe-ring-pulse 2600ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    transition: opacity 200ms ease;
+  }
+
+  /* The idle pulse radiates past the icon's own bounds by design, but that
+     same radius would poke across the seam into the left door once the
+     button scales up on launch — fade it out right as the launch starts
+     (well before the grow keyframes run) instead of pushing the whole
+     button further from the edge, which only broke its alignment with the
+     "01" label below. */
+  body.page-about:not(.is-admin) .vibe-gate-btn.is-launching .vibe-gate-btn__ring {
+    opacity: 0;
+  }
+
+  body.page-about:not(.is-admin) .vibe-gate-btn__dot {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--verge-ultraviolet);
+    transition: scale 240ms cubic-bezier(0.4, 0, 0.2, 1), background-color 240ms ease;
+  }
+
+  /* Resting state reads as the solid, "on" capsule; hover eases back to the
+     ghost tint — a quieter state the pointer settling there reveals. */
+  body.page-about:not(.is-admin) .vibe-gate-btn:hover .vibe-gate-btn__dot {
+    scale: 1.08;
+    background: rgba(82, 0, 255, 0.16);
+  }
+
+  /* Play triangle, drawn with borders instead of an icon font/svg — one
+     less asset for a shape this simple. Optically centred by nudging right
+     of true-center (equilateral-triangle balance). Swaps to a pause glyph
+     once `.is-playing` lands (see js/features/vibe-player.js), so the icon
+     already matches the corner control it's about to hand off to. */
+  body.page-about:not(.is-admin) .vibe-gate-btn__glyph {
+    position: absolute;
+    top: 50%;
+    left: 56%;
+    transform: translate(-50%, -50%);
+    border-style: solid;
+    border-width: 5px 0 5px 8px;
+    border-color: transparent transparent transparent var(--hazard-white);
+    transition: border-color 240ms ease;
+  }
+
+  /* Inverts alongside the dot's fade to ghost above, so the glyph stays
+     legible against the translucent tint instead of vanishing into it. */
+  body.page-about:not(.is-admin) .vibe-gate-btn:hover .vibe-gate-btn__glyph {
+    border-color: transparent transparent transparent var(--verge-ultraviolet);
+  }
+
+  body.page-about:not(.is-admin) .vibe-gate-btn.is-playing .vibe-gate-btn__glyph {
+    left: 50%;
+    width: 8px;
+    height: 10px;
+    border: 0;
+  }
+
+  body.page-about:not(.is-admin) .vibe-gate-btn.is-playing .vibe-gate-btn__glyph::before,
+  body.page-about:not(.is-admin) .vibe-gate-btn.is-playing .vibe-gate-btn__glyph::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 3px;
+    height: 10px;
+    background: var(--hazard-white);
+    transition: background-color 240ms ease;
+  }
+
+  body.page-about:not(.is-admin) .vibe-gate-btn.is-playing .vibe-gate-btn__glyph::before {
+    left: 0;
+  }
+
+  body.page-about:not(.is-admin) .vibe-gate-btn.is-playing .vibe-gate-btn__glyph::after {
+    left: 5px;
+  }
+
+  body.page-about:not(.is-admin) .vibe-gate-btn.is-playing:hover .vibe-gate-btn__glyph::before,
+  body.page-about:not(.is-admin) .vibe-gate-btn.is-playing:hover .vibe-gate-btn__glyph::after {
+    background: var(--verge-ultraviolet);
+  }
+
+  body.page-about:not(.is-admin) .vibe-gate-btn__text {
+    font-family: var(--font-mono, monospace);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.3px;
+    color: var(--verge-ultraviolet);
+    transition: color 240ms ease;
+  }
+
+  /* Readable-on-mint light state from the shared token set, matching how
+     the mint header treats its own active nav text elsewhere on the site. */
+  body.page-about:not(.is-admin) .vibe-gate-btn:hover .vibe-gate-btn__text {
+    color: var(--hazard-white);
+  }
+
+  @keyframes vibe-ring-pulse {
+    0% { transform: scale(0.85); opacity: 0.7; }
+    70% { transform: scale(1.5); opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  /* One-shot theatrics on the gate button: grows with a punchy overshoot,
+     then implodes to a point. Driven from JS (Web Animations API) so the
+     two phases can chain precisely off the audio actually starting — these
+     classes only hold the transform-origin/will-change, not the motion. */
+  body.page-about:not(.is-admin) .vibe-gate-btn.is-launching {
+    pointer-events: none;
+    will-change: transform, opacity;
   }
 
   body.page-about:not(.is-admin) .section--journey {
@@ -993,6 +1171,14 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
       animation-range: cover 0% cover 100%;
     }
 
+    /* Exact same keyframes/timeline/range as the right door above, so the
+       button tracks it frame-for-frame without being its DOM child. */
+    body.page-about:not(.is-admin) .vibe-gate-btn {
+      animation: impact-shutter-right 1s linear both;
+      animation-timeline: --impact-chapter;
+      animation-range: cover 0% cover 100%;
+    }
+
     body.page-about:not(.is-admin) .scroll-chapter__heading {
       animation: impact-heading-settle 1s linear both;
       animation-timeline: --impact-chapter;
@@ -1085,6 +1271,93 @@ body.page-about.is-journey-fold-releasing:not(.is-admin) #contact {
       margin-top: 48px;
     }
   }
+}
+
+/* Persistent corner player: fixed to the viewport (not the scroll chapter),
+   so it survives scrolling anywhere on the page once revealed. Hidden by
+   default; JS toggles `.is-visible` the moment the gate button is pressed. */
+.vibe-player {
+  position: fixed;
+  left: clamp(16px, 2.4vw, 32px);
+  bottom: clamp(16px, 2.4vw, 32px);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px 10px 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--absolute-black);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38);
+  color: var(--hazard-white);
+  cursor: pointer;
+  opacity: 0;
+  scale: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.vibe-player.is-visible {
+  opacity: 1;
+  scale: 1;
+  pointer-events: auto;
+}
+
+.vibe-player__icon {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--jelly-mint);
+  flex: none;
+}
+
+.vibe-player__icon::before,
+.vibe-player__icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  background: var(--absolute-black);
+}
+
+/* Pause glyph (two bars) is the default — playing is the common state the
+   moment this control appears, since it only appears right after launch. */
+.vibe-player__icon::before {
+  left: 12px;
+  width: 3px;
+  height: 12px;
+  transform: translateY(-50%);
+}
+
+.vibe-player__icon::after {
+  left: 19px;
+  width: 3px;
+  height: 12px;
+  transform: translateY(-50%);
+}
+
+/* Play glyph (triangle) swaps in once paused/ended. */
+.vibe-player.is-paused .vibe-player__icon::before {
+  left: 13px;
+  width: 0;
+  height: 0;
+  background: transparent;
+  border-style: solid;
+  border-width: 7px 0 7px 11px;
+  border-color: transparent transparent transparent var(--absolute-black);
+  transform: translateY(-50%);
+}
+
+.vibe-player.is-paused .vibe-player__icon::after {
+  content: none;
+}
+
+.vibe-player__label {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  white-space: nowrap;
 }
 
 @keyframes impact-shutter-left {
