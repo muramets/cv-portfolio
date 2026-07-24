@@ -17,6 +17,32 @@ const VOLUME_FADE_MARGIN_S = 10;
 const ARRIVE_EASE = 'cubic-bezier(0.22, 0.82, 0.28, 1)';
 const RECEDE_EASE = 'cubic-bezier(0.6, 0, 0.9, 0.2)';
 
+// Standard parametric cubic-bezier solver (Newton's method on the X curve),
+// so the volume fade rides the exact same easing language as the motion
+// above instead of a plain linear ramp.
+function cubicBezier(x1, y1, x2, y2) {
+  const bx = t => 3 * (1 - t) ** 2 * t * x1 + 3 * (1 - t) * t * t * x2 + t ** 3;
+  const by = t => 3 * (1 - t) ** 2 * t * y1 + 3 * (1 - t) * t * t * y2 + t ** 3;
+  return x => {
+    let t = x;
+    for (let i = 0; i < 8; i++) {
+      const dx = bx(t) - x;
+      if (Math.abs(dx) < 1e-4) break;
+      const d = 3 * (1 - t) ** 2 * x1 + 6 * (1 - t) * t * (x2 - x1) + 3 * t * t * (1 - x2);
+      if (Math.abs(d) < 1e-6) break;
+      t -= dx / d;
+    }
+    return by(t);
+  };
+}
+
+// Fade-in starts from INTRO_VOLUME (audible immediately, no dead-silence
+// beat) and eases the rest of the way to the target — quick initial
+// movement, gentle settle. Fade-out mirrors it: quick initial drop, long
+// gentle tail into silence, so the ending never reads as an abrupt cut.
+const fadeInEase = cubicBezier(0.16, 1, 0.3, 1);
+const fadeOutEase = cubicBezier(0.15, 1, 0.4, 1);
+
 // The "01" label and the gate button live in separate panels but are meant
 // to read as one composed block. Their left edges already share the same
 // CSS inset, but the label's right edge only lines up with the button's
@@ -41,9 +67,11 @@ function alignGateLabelToButton(gateBtn) {
 
   const apply = () => {
     if (!matchMedia('(min-width: 901px)').matches) return;
+    if (getComputedStyle(gateBtn).display === 'none') return;
     const shutterRect = shutterRight.getBoundingClientRect();
     const iconRect = dot.getBoundingClientRect();
     const textRect = text.getBoundingClientRect();
+    if (iconRect.width === 0 || textRect.width === 0) return;
     label.style.left = `${iconRect.left - shutterRect.left}px`;
     label.style.width = `${textRect.right - iconRect.left}px`;
   };
@@ -57,56 +85,53 @@ export function initVibePlayer() {
 
   alignGateLabelToButton(gateBtn);
 
-  // Web Audio graph setup: iOS Safari ignores HTMLMediaElement.volume entirely
-  // and plays HTMLMediaElement at 100% volume directly. Pre-decoding to an
-  // AudioBufferSourceNode connected to GainNode guarantees 100% sample-accurate
-  // volume control and fading on iOS Safari/iPad as well as desktop browsers.
+  const audio = new Audio(TRACK_SRC);
+  audio.preload = 'metadata';
+
   let audioCtx = null;
   let gainNode = null;
-  let audioBuffer = null;
-  let sourceNode = null;
-  let isPreloading = false;
-  let isPlaying = false;
-  let isPaused = false;
-  let startAudioTime = 0;
-  let pauseOffset = 0;
-  let fadingOut = false;
 
-  const preloadAudio = async () => {
-    if (audioBuffer || isPreloading) return;
-    isPreloading = true;
-    try {
-      const res = await fetch(TRACK_SRC);
-      const arrayBuffer = await res.arrayBuffer();
-      const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      if (!audioCtx) audioCtx = ctx;
-      audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('[vibe-player] Audio buffer preload error:', err);
-    } finally {
-      isPreloading = false;
-    }
+  const ensureAudioGraph = () => {
+    if (gainNode) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaElementSource(audio);
+    gainNode = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+    gainNode.gain.setValueAtTime(INTRO_VOLUME, now);
+    source.connect(gainNode).connect(audioCtx.destination);
   };
 
   const preloadObserver = new IntersectionObserver(entries => {
     if (!entries.some(entry => entry.isIntersecting)) return;
-    void preloadAudio();
+    audio.preload = 'auto';
+    audio.load();
     preloadObserver.disconnect();
   }, { rootMargin: '200% 0px' });
   preloadObserver.observe(gateBtn);
 
-  const ensureAudioGraph = () => {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (!gainNode) {
-      gainNode = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      gainNode.gain.setValueAtTime(INTRO_VOLUME, now);
-      gainNode.connect(audioCtx.destination);
-    }
+  let fadeToken = 0;
+  const fadeVolume = (from, to, duration, ease) => {
+    const token = ++fadeToken;
+    return new Promise(resolve => {
+      const start = performance.now();
+      const step = now => {
+        if (token !== fadeToken) return resolve();
+        const x = Math.min((now - start) / duration, 1);
+        if (gainNode) gainNode.gain.value = from + (to - from) * ease(x);
+        if (x < 1) requestAnimationFrame(step);
+        else resolve();
+      };
+      requestAnimationFrame(step);
+    });
   };
+
+  let fadingOut = false;
+  audio.addEventListener('timeupdate', () => {
+    if (fadingOut || !Number.isFinite(audio.duration)) return;
+    if (audio.currentTime < audio.duration - VOLUME_FADE_MARGIN_S) return;
+    fadingOut = true;
+    fadeVolume(gainNode ? gainNode.gain.value : TARGET_VOLUME, 0, VOLUME_FADE_MS, fadeOutEase);
+  });
 
   const player = document.createElement('button');
   player.type = 'button';
@@ -118,62 +143,9 @@ export function initVibePlayer() {
   `;
   document.body.append(player);
 
-  const setPlayerState = paused => {
-    isPaused = paused;
+  const setPaused = paused => {
     player.classList.toggle('is-paused', paused);
     player.setAttribute('aria-label', paused ? 'Play the track' : 'Pause the track');
-  };
-
-  const playBufferFrom = async (offset = 0) => {
-    ensureAudioGraph();
-    if (audioCtx.state === 'suspended') {
-      await audioCtx.resume();
-    }
-    if (!audioBuffer) {
-      await preloadAudio();
-      if (!audioBuffer) throw new Error('Audio decoding failed');
-    }
-    if (sourceNode) {
-      try { sourceNode.stop(); } catch {}
-    }
-
-    const now = audioCtx.currentTime;
-    gainNode.gain.cancelScheduledValues(now);
-    gainNode.gain.setValueAtTime(INTRO_VOLUME, now);
-    gainNode.gain.linearRampToValueAtTime(TARGET_VOLUME, now + (VOLUME_FADE_MS / 1000));
-
-    sourceNode = audioCtx.createBufferSource();
-    sourceNode.buffer = audioBuffer;
-    sourceNode.connect(gainNode);
-
-    startAudioTime = now - offset;
-    sourceNode.start(0, offset);
-    isPlaying = true;
-    setPlayerState(false);
-
-    sourceNode.onended = () => {
-      const elapsed = audioCtx.currentTime - startAudioTime;
-      if (audioBuffer && elapsed >= audioBuffer.duration - 0.5) {
-        isPlaying = false;
-        pauseOffset = 0;
-        setPlayerState(true);
-      }
-    };
-  };
-
-  const monitorFadeOut = () => {
-    if (!isPlaying || isPaused || fadingOut || !audioBuffer || !audioCtx) return;
-    const elapsed = audioCtx.currentTime - startAudioTime;
-    if (elapsed >= audioBuffer.duration - VOLUME_FADE_MARGIN_S) {
-      fadingOut = true;
-      const now = audioCtx.currentTime;
-      const currentGain = gainNode.gain.value;
-      gainNode.gain.cancelScheduledValues(now);
-      gainNode.gain.setValueAtTime(currentGain, now);
-      gainNode.gain.linearRampToValueAtTime(0, now + (VOLUME_FADE_MS / 1000));
-    } else {
-      requestAnimationFrame(monitorFadeOut);
-    }
   };
 
   const launch = async () => {
@@ -183,12 +155,15 @@ export function initVibePlayer() {
 
     gateBtn.classList.add('is-launching');
 
-    // Ensure AudioGraph starts synchronously inside user tap gesture
     ensureAudioGraph();
-
     const audioReady = (async () => {
-      await playBufferFrom(0);
-      requestAnimationFrame(monitorFadeOut);
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
+      audio.currentTime = 0;
+      if (gainNode) {
+        gainNode.gain.setValueAtTime(INTRO_VOLUME, audioCtx.currentTime);
+      }
+      await audio.play();
+      fadeVolume(INTRO_VOLUME, TARGET_VOLUME, VOLUME_FADE_MS, fadeInEase);
     })();
 
     const atInner = (y, scale) => `translateY(${y}px) scale(${scale})`;
@@ -214,9 +189,8 @@ export function initVibePlayer() {
     try {
       await audioReady;
     } catch (err) {
-      // Autoplay/decoding refused after all — restore gate button.
       // eslint-disable-next-line no-console
-      console.warn('[vibe-player] Launch playback error:', err);
+      console.warn('[vibe-player] Playback failed:', err);
       inner.getAnimations().forEach(anim => anim.cancel());
       gateBtn.classList.remove('is-launching', 'is-playing');
       gateBtn.disabled = false;
@@ -240,15 +214,14 @@ export function initVibePlayer() {
   gateBtn.addEventListener('click', () => { void launch(); }, { once: true });
 
   player.addEventListener('click', () => {
-    if (!audioCtx) return;
-    if (isPaused) {
-      void playBufferFrom(pauseOffset);
+    if (audio.paused) {
+      audio.play();
     } else {
-      pauseOffset = Math.max(0, audioCtx.currentTime - startAudioTime);
-      if (sourceNode) {
-        try { sourceNode.stop(); } catch {}
-      }
-      setPlayerState(true);
+      audio.pause();
     }
   });
+
+  audio.addEventListener('play', () => setPaused(false));
+  audio.addEventListener('pause', () => setPaused(true));
+  audio.addEventListener('ended', () => setPaused(true));
 }
