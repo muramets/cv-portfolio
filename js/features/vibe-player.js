@@ -3,7 +3,7 @@
 // Scoped to about.html only for now — no cross-page persistence yet.
 
 const TRACK_SRC = 'assets/audio/jesus-walks.mp3';
-const TARGET_VOLUME = 0.20;
+const TARGET_VOLUME = 0.15;
 // Starting the ramp at 0 reads as a long dead-silence beat before anything
 // happens — sound should be there the instant playback starts, then ease
 // up to the target level rather than fading in from nothing.
